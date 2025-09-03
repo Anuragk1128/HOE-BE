@@ -3,6 +3,7 @@ const Brand = require('../models/Brand');
 const Category = require('../models/Category');
 const Subcategory = require('../models/Subcategory');
 const Product = require('../models/Product');
+const { Types: { ObjectId } } = require('mongoose');
 
 const router = express.Router();
 
@@ -67,6 +68,106 @@ router.get('/product/:idOrSlug', async (req, res, next) => {
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json({ data: product });
   } catch (err) { next(err); }
+});
+
+// GET /api/catalog/products/ids - Get products by their IDs
+router.get('/products/ids', async (req, res, next) => {
+  try {
+    const { ids } = req.query;
+    
+    if (!ids) {
+      return res.status(400).json({ success: false, message: 'Product IDs are required' });
+    }
+
+    // Convert comma-separated string of IDs to an array
+    const productIds = Array.isArray(ids) ? ids : ids.split(',');
+    
+    // Validate that all IDs are valid MongoDB ObjectIds
+    const validIds = productIds.every(id => ObjectId.isValid(id));
+    if (!validIds) {
+      return res.status(400).json({ success: false, message: 'Invalid product ID format' });
+    }
+
+    const products = await Product.find({
+      _id: { $in: productIds },
+      status: 'active'
+    }).select('-__v');
+
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/catalog/all-products - Get all active products
+router.get('/all-products', async (req, res, next) => {
+  try {
+    const products = await Product.find({ status: 'active' })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/catalog/products/:id - Get a single product by ID
+router.get('/products/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
+    const product = await Product.findOne({
+      _id: id,
+      status: 'active'
+    }).select('-__v');
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: product
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/catalog/all - Get all active products (no filtering)
+router.get('/all', async (req, res, next) => {
+  try {
+    const products = await Product.find({ status: 'active' })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: products,
+      count: products.length
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

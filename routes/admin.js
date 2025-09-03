@@ -216,7 +216,7 @@ router.delete('/brands/:brandId/categories/:categoryId/subcategories/:id', async
 router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryId/products', async (req, res, next) => {
   try {
     const { brandId, categoryId, subcategoryId } = req.params;
-    const { title, slug, description, images, price, compareAtPrice, attributes, stock, status, vendorId, tags } = req.body;
+    const { title, slug, description, images, price, compareAtPrice, attributes, stock, status, tags } = req.body;
     if (!title || price == null) return res.status(400).json({ message: 'Title and price are required' });
 
     const brand = await Brand.findById(brandId);
@@ -243,7 +243,6 @@ router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryI
       attributes,
       stock,
       status,
-      vendorId,
       tags,
     });
     res.status(201).json({ data: product });
@@ -413,6 +412,110 @@ router.get('/products', async (req, res, next) => {
 
     res.json({
       data: products
+    });
+  } catch (err) { next(err); }
+});
+
+// ===== Vendor Management Endpoints =====
+// GET /api/admin/vendors - get list of all vendors (admin) - simple version
+router.get('/vendors', async (req, res, next) => {
+  try {
+    const vendors = await Vendor.find()
+      .populate('userId', 'name email')
+      .select('displayName status userId')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      data: vendors
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/vendors/detailed - get detailed list of all vendors (admin) - with pagination and filters
+router.get('/vendors/detailed', async (req, res, next) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    
+    const filter = {};
+    if (status && ['pending', 'approved', 'suspended'].includes(status)) {
+      filter.status = status;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const vendors = await Vendor.find(filter)
+      .populate('userId', 'name email role isActive')
+      .select('-__v')
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    const total = await Vendor.countDocuments(filter);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.json({
+      data: vendors,
+      pagination: {
+        page: parseInt(page),
+        pages: totalPages,
+        total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/vendors/:id - get vendor details by ID (admin)
+router.get('/vendors/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    const vendor = await Vendor.findById(id)
+      .populate('userId', 'name email role isActive createdAt')
+      .select('-__v');
+
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    res.json({
+      data: vendor
+    });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/vendors/:id - update vendor status (admin)
+router.patch('/vendors/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, displayName, businessName, phone, gstNumber, address } = req.body;
+    
+    const allowedUpdates = ['status', 'displayName', 'businessName', 'phone', 'gstNumber', 'address'];
+    const updates = {};
+    
+    for (const key of allowedUpdates) {
+      if (key in req.body) {
+        if (key === 'status' && !['pending', 'approved', 'suspended'].includes(req.body[key])) {
+          return res.status(400).json({ message: 'Invalid status value' });
+        }
+        updates[key] = req.body[key];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    const vendor = await Vendor.findByIdAndUpdate(id, updates, { new: true })
+      .populate('userId', 'name email role isActive')
+      .select('-__v');
+
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    res.json({
+      data: vendor
     });
   } catch (err) { next(err); }
 });
