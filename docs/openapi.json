@@ -1,0 +1,774 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "House of Evolve API",
+    "version": "1.0.0",
+    "description": "Multi-brand catalog API for IRA and Jerseymise, plus combined catalog for HOE."
+  },
+  "servers": [
+    { "url": "http://localhost:{port}", "variables": { "port": { "default": "4000" } } }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "status": { "type": "string" } } } } }
+          }
+        }
+      }
+    },
+    "/api/auth/admin/login": {
+      "post": {
+        "summary": "Admin login (token only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logged in", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenOnly" } } } },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a customer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Customer login (token + user)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logged in (customers only)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "401": { "description": "Invalid credentials" },
+          "403": { "description": "Forbidden for admins and vendors" }
+        }
+      }
+    },
+    "/api/auth/vendor/login": {
+      "post": {
+        "summary": "Vendor login (token only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Logged in", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TokenOnly" } } } },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/vendor/register": {
+      "post": {
+        "summary": "Register a vendor (user + vendor profile)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "displayName"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" },
+                  "displayName": { "type": "string" },
+                  "businessName": { "type": "string" },
+                  "phone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Vendor created (pending)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VendorAuthResponse" } } } },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/api/auth/admin/create": {
+      "post": {
+        "summary": "Create an admin user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "format": "password" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Admin created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/api/brands": {
+      "get": {
+        "summary": "List active brands",
+        "responses": {
+          "200": { "description": "List of brands" }
+        }
+      }
+    },
+    "/api/brands/{brandSlug}/categories": {
+      "get": {
+        "summary": "List categories for a brand",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "ira" } }
+        ],
+        "responses": { "200": { "description": "List of categories" }, "404": { "description": "Brand not found" } }
+      }
+    },
+    "/api/brands/{brandSlug}/categories/{categorySlug}/subcategories": {
+      "get": {
+        "summary": "List subcategories for a category in a brand",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "ira" } },
+          { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "necklaces" } }
+        ],
+        "responses": { "200": { "description": "List of subcategories" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/brands/{brandSlug}/products": {
+      "get": {
+        "summary": "List products for a brand",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "subcategory", "in": "query", "schema": { "type": "string" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "min", "in": "query", "schema": { "type": "number" } },
+          { "name": "max", "in": "query", "schema": { "type": "number" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": { "200": { "description": "Paginated products" }, "404": { "description": "Brand not found" } }
+      }
+    },
+    "/api/brands/{brandSlug}/categories/{categorySlug}/products": {
+      "get": {
+        "summary": "List products for a brand category",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } }
+        ],
+        "responses": { "200": { "description": "Products for the specified brand and category" }, "404": { "description": "Brand or category not found" } }
+      }
+    },
+    "/api/brands/{brandSlug}/categories/{categorySlug}/subcategories/{subcategorySlug}/products": {
+      "get": {
+        "summary": "List products for a brand subcategory",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } },
+          { "name": "subcategorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "polo" } }
+        ],
+        "responses": { "200": { "description": "Products for the specified brand, category, and subcategory" }, "404": { "description": "Brand, category, or subcategory not found" } }
+      }
+    },
+    "/api/catalog/products": {
+      "get": {
+        "summary": "List products across all brands",
+        "parameters": [
+          { "name": "brand", "in": "query", "schema": { "type": "string", "example": "ira" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "subcategory", "in": "query", "schema": { "type": "string" } },
+          { "name": "q", "in": "query", "schema": { "type": "string" } },
+          { "name": "min", "in": "query", "schema": { "type": "number" } },
+          { "name": "max", "in": "query", "schema": { "type": "number" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": { "200": { "description": "Paginated products" } }
+      }
+    },
+    "/api/catalog/product/{idOrSlug}": {
+      "get": {
+        "summary": "Get a product by Mongo ID or slug",
+        "parameters": [
+          { "name": "idOrSlug", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Product detail" }, "404": { "description": "Not found" } }
+      }
+    },
+    "/api/admin/brands": {
+      "post": {
+        "summary": "Create a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "active": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Brand" } } } },
+          "409": { "description": "Slug already exists" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{id}": {
+      "patch": {
+        "summary": "Update a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "active": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Brand" } } } },
+          "404": { "description": "Brand not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "404": { "description": "Brand not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories": {
+      "post": {
+        "summary": "Create category for a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "image": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Category" } } } },
+          "404": { "description": "Brand not found" },
+          "409": { "description": "Slug already exists for this brand" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories/{id}": {
+      "patch": {
+        "summary": "Update category for a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "image": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Category" } } } },
+          "404": { "description": "Brand or Category not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "delete": {
+        "summary": "Delete category for a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "404": { "description": "Brand or Category not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories/{categoryId}/subcategories": {
+      "post": {
+        "summary": "Create subcategory for a category (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "image": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Subcategory" } } } },
+          "404": { "description": "Brand or Category not found" },
+          "409": { "description": "Slug already exists for this category" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories/{categoryId}/subcategories/{id}": {
+      "patch": {
+        "summary": "Update subcategory for a category (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "image": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Subcategory" } } } },
+          "404": { "description": "Brand/Category/Subcategory not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "delete": {
+        "summary": "Delete subcategory for a category (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "404": { "description": "Brand/Category/Subcategory not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories/{categoryId}/subcategories/{subcategoryId}/products": {
+      "post": {
+        "summary": "Create product (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "subcategoryId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title", "price"],
+                "properties": {
+                  "title": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "images": { "type": "array", "items": { "type": "string" } },
+                  "price": { "type": "number" },
+                  "compareAtPrice": { "type": "number" },
+                  "attributes": { "type": "object", "additionalProperties": true },
+                  "stock": { "type": "number" },
+                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
+                  "vendorId": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+          "404": { "description": "Brand/Category/Subcategory not found" },
+          "409": { "description": "Slug already exists for this brand" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandId}/categories/{categoryId}/subcategories/{subcategoryId}/products/{id}": {
+      "patch": {
+        "summary": "Update product (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "subcategoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": { "type": "string" },
+                  "slug": { "type": "string" },
+                  "description": { "type": "string" },
+                  "images": { "type": "array", "items": { "type": "string" } },
+                  "price": { "type": "number" },
+                  "compareAtPrice": { "type": "number" },
+                  "attributes": { "type": "object", "additionalProperties": true },
+                  "stock": { "type": "number" },
+                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
+                  "vendorId": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Product" } } } },
+          "404": { "description": "Brand/Category/Subcategory/Product not found" },
+          "409": { "description": "Slug already exists for this brand" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "delete": {
+        "summary": "Delete product (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "categoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "subcategoryId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "No Content" },
+          "404": { "description": "Brand/Category/Subcategory/Product not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandSlug}/products": {
+      "get": {
+        "summary": "List products for a brand (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } }
+        ],
+        "responses": { 
+          "200": { "description": "Products for the specified brand with populated category and subcategory" }, 
+          "404": { "description": "Brand not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandSlug}/categories/{categorySlug}/products": {
+      "get": {
+        "summary": "List products for a brand category (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } }
+        ],
+        "responses": { 
+          "200": { "description": "Products for the specified brand and category with populated subcategory" }, 
+          "404": { "description": "Brand or category not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/brands/{brandSlug}/categories/{categorySlug}/subcategories/{subcategorySlug}/products": {
+      "get": {
+        "summary": "List products for a brand subcategory (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } },
+          { "name": "subcategorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "polo" } }
+        ],
+        "responses": { 
+          "200": { "description": "Products for the specified brand, category, and subcategory" }, 
+          "404": { "description": "Brand, category, or subcategory not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/products": {
+      "get": {
+        "summary": "List all products across all brands (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "brand", "in": "query", "schema": { "type": "string", "example": "jerseymise" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "subcategory", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": { 
+          "200": { "description": "Products with populated brand, category, subcategory, and vendor" }, 
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "brandId": { "type": "string" },
+          "categoryId": { "type": "string" },
+          "subcategoryId": { "type": "string" },
+          "title": { "type": "string" },
+          "slug": { "type": "string" },
+          "description": { "type": "string" },
+          "images": { "type": "array", "items": { "type": "string" } },
+          "price": { "type": "number" },
+          "compareAtPrice": { "type": "number" },
+          "attributes": { "type": "object", "additionalProperties": true },
+          "stock": { "type": "number" },
+          "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
+          "vendorId": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "Subcategory": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "brandId": { "type": "string" },
+          "categoryId": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "image": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "brandId": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "image": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "Brand": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "description": { "type": "string" },
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "TokenOnly": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["customer", "vendor", "admin"] }
+        }
+      },
+      "Vendor": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "displayName": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "approved", "suspended"] }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "VendorAuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/User" },
+          "vendor": { "$ref": "#/components/schemas/Vendor" }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer" },
+          "pages": { "type": "integer" },
+          "total": { "type": "integer" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
