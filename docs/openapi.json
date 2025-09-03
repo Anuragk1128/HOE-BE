@@ -6,9 +6,168 @@
     "description": "Multi-brand catalog API for IRA and Jerseymise, plus combined catalog for HOE."
   },
   "servers": [
-    { "url": "http://localhost:{port}", "variables": { "port": { "default": "4000" } } }
+    { "url": "https://hoe-be.onrender.com", "description": "Production server" },
+    { "url": "http://localhost:{port}", "variables": { "port": { "default": "4000" } }, "description": "Local development server" }
   ],
   "paths": {
+    "/api/products": {
+      "get": {
+        "summary": "Get all active products",
+        "description": "Retrieve a list of all active products without any filtering",
+        "tags": ["Products"],
+        "responses": {
+          "200": {
+            "description": "List of all active products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "count": { "type": "integer", "example": 10 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "summary": "Get a single product by ID",
+        "description": "Retrieve details of a specific product using its unique ID",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the product to retrieve",
+            "schema": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Product" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/all-products": {
+      "get": {
+        "summary": "Get all active products",
+        "description": "Retrieve a list of all active products without any filtering",
+        "tags": ["Catalog"],
+        "responses": {
+          "200": {
+            "description": "List of all active products",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "count": { "type": "integer", "example": 10 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog/products/{id}": {
+      "get": {
+        "summary": "Get a single product by ID",
+        "description": "Retrieve details of a specific product using its unique ID",
+        "tags": ["Catalog"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the product to retrieve",
+            "schema": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Product" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID format"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health check",
@@ -233,6 +392,59 @@
           { "name": "subcategorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "polo" } }
         ],
         "responses": { "200": { "description": "Products for the specified brand, category, and subcategory" }, "404": { "description": "Brand, category, or subcategory not found" } }
+      }
+    },
+    "/api/catalog/products/ids": {
+      "get": {
+        "summary": "Get products by their IDs",
+        "description": "Retrieve multiple products by providing their IDs as a comma-separated list",
+        "tags": ["Catalog"],
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "description": "Comma-separated list of product IDs",
+            "schema": {
+              "type": "string",
+              "example": "507f1f77bcf86cd799439011,507f1f77bcf86cd799439012"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of products matching the provided IDs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "count": { "type": "integer", "example": 2 }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request - missing or invalid product IDs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/catalog/products": {
@@ -558,7 +770,6 @@
                   "attributes": { "type": "object", "additionalProperties": true },
                   "stock": { "type": "number" },
                   "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
-                  "vendorId": { "type": "string" },
                   "tags": { "type": "array", "items": { "type": "string" } }
                 }
               }
@@ -653,6 +864,82 @@
           "403": { "description": "Forbidden" }
         }
       }
+    },
+    "/api/admin/vendors": {
+      "get": {
+        "summary": "List all vendors (admin) - simple version",
+        "description": "Get a simple list of all vendors with basic information (no pagination or filters)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { 
+          "200": { "description": "Simple list of vendors with basic data" }, 
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/vendors/detailed": {
+      "get": {
+        "summary": "List all vendors (admin) - detailed version",
+        "description": "Get a detailed, paginated list of vendors with filters and full information",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "suspended"] } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": { 
+          "200": { "description": "Paginated list of vendors with populated user data" }, 
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/vendors/{id}": {
+      "get": {
+        "summary": "Get vendor details by ID (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { 
+          "200": { "description": "Vendor details with populated user data" }, 
+          "404": { "description": "Vendor not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "patch": {
+        "summary": "Update vendor (admin)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["pending", "approved", "suspended"] },
+                  "displayName": { "type": "string" },
+                  "businessName": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "gstNumber": { "type": "string" },
+                  "address": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { 
+          "200": { "description": "Vendor updated successfully" }, 
+          "400": { "description": "Invalid status value or no fields to update" },
+          "404": { "description": "Vendor not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
     }
   },
   "components": {
@@ -734,9 +1021,16 @@
       "Vendor": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
+          "_id": { "type": "string" },
+          "userId": { "$ref": "#/components/schemas/User" },
           "displayName": { "type": "string" },
-          "status": { "type": "string", "enum": ["pending", "approved", "suspended"] }
+          "businessName": { "type": "string" },
+          "status": { "type": "string", "enum": ["pending", "approved", "suspended"] },
+          "phone": { "type": "string" },
+          "gstNumber": { "type": "string" },
+          "address": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
         }
       },
       "AuthResponse": {
