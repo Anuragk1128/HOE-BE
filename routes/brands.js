@@ -73,7 +73,7 @@ router.get('/:brandSlug/products', async (req, res, next) => {
     const skip = (Number(page) - 1) * Number(limit);
 
     const [items, total] = await Promise.all([
-      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).select('-__v'),
+      Product.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)).select('-__v').populate('categoryId', 'name slug').populate('subcategoryId', 'name slug'),
       Product.countDocuments(filter),
     ]);
 
@@ -116,7 +116,7 @@ router.get('/:brandSlug/categories/:categorySlug/products', async (req, res, nex
       status: 'active' 
     };
 
-    const products = await Product.find(filter).select('-__v');
+    const products = await Product.find(filter).select('-__v').populate('categoryId', 'name slug').populate('subcategoryId', 'name slug');
 
     res.json({
       data: products
@@ -149,7 +149,7 @@ router.get('/:brandSlug/categories/:categorySlug/subcategories/:subcategorySlug/
       status: 'active' 
     };
 
-    const products = await Product.find(filter).select('-__v');
+    const products = await Product.find(filter).select('-__v').populate('categoryId', 'name slug').populate('subcategoryId', 'name slug');
 
     res.json({
       data: products
