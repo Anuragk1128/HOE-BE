@@ -373,6 +373,34 @@
         "responses": { "200": { "description": "Paginated products" }, "404": { "description": "Brand not found" } }
       }
     },
+    "/api/brands/{brandSlug}/products/list": {
+      "get": {
+        "summary": "List product titles for a brand (public)",
+        "description": "Returns only the list of product titles for the given brand slug. No pagination or category/subcategory fields.",
+        "parameters": [
+          { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of product titles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "type": "string", "example": "Classic White Tee" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Brand not found" }
+        }
+      }
+    },
     "/api/brands/{brandSlug}/categories/{categorySlug}/products": {
       "get": {
         "summary": "List products for a brand category",
@@ -962,6 +990,9 @@
           "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
           "vendorId": { "type": "string" },
           "tags": { "type": "array", "items": { "type": "string" } },
+          "featured": { "type": "boolean", "default": false },
+          "bestseller": { "type": "boolean", "default": false },
+          "newArrival": { "type": "boolean", "default": false },
           "createdAt": { "type": "string" },
           "updatedAt": { "type": "string" }
         }
