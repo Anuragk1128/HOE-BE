@@ -9,6 +9,10 @@ router.get('/', async (req, res, next) => {
   try {
     const products = await Product.find({ status: 'active' })
       .select('-__v')
+      .populate('brandId', 'name slug')
+      .populate('categoryId', 'name slug')
+      .populate('subcategoryId', 'name slug')
+      .populate('vendorId', 'name email')
       .sort({ createdAt: -1 });
     
     res.json({
@@ -36,7 +40,11 @@ router.get('/:id', async (req, res, next) => {
     const product = await Product.findOne({
       _id: id,
       status: 'active'
-    }).select('-__v');
+    }).select('-__v')
+      .populate('brandId', 'name slug')
+      .populate('categoryId', 'name slug')
+      .populate('subcategoryId', 'name slug')
+      .populate('vendorId', 'name email');
     
     if (!product) {
       return res.status(404).json({

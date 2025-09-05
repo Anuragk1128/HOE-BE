@@ -13,11 +13,11 @@
     "/api/products": {
       "get": {
         "summary": "Get all active products",
-        "description": "Retrieve a list of all active products without any filtering",
+        "description": "Retrieve a list of all active products with populated brand, category, subcategory, and vendor data",
         "tags": ["Products"],
         "responses": {
           "200": {
-            "description": "List of all active products",
+            "description": "List of all active products with populated data",
             "content": {
               "application/json": {
                 "schema": {
@@ -40,7 +40,7 @@
     "/api/products/{id}": {
       "get": {
         "summary": "Get a single product by ID",
-        "description": "Retrieve details of a specific product using its unique ID",
+        "description": "Retrieve details of a specific product using its unique ID with populated brand, category, subcategory, and vendor data",
         "tags": ["Products"],
         "parameters": [
           {
@@ -56,7 +56,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Product details",
+            "description": "Product details with populated data",
             "content": {
               "application/json": {
                 "schema": {
@@ -360,17 +360,38 @@
     "/api/brands/{brandSlug}/products": {
       "get": {
         "summary": "List products for a brand",
+        "description": "Retrieve products for a specific brand with populated category and subcategory data. Supports filtering, searching, and pagination.",
+        "tags": ["Brands", "Products"],
         "parameters": [
           { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
-          { "name": "category", "in": "query", "schema": { "type": "string" } },
-          { "name": "subcategory", "in": "query", "schema": { "type": "string" } },
-          { "name": "q", "in": "query", "schema": { "type": "string" } },
-          { "name": "min", "in": "query", "schema": { "type": "number" } },
-          { "name": "max", "in": "query", "schema": { "type": "number" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+          { "name": "category", "in": "query", "schema": { "type": "string", "description": "Filter by category slug" } },
+          { "name": "subcategory", "in": "query", "schema": { "type": "string", "description": "Filter by subcategory slug" } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "description": "Search query for title, description, or tags" } },
+          { "name": "min", "in": "query", "schema": { "type": "number", "description": "Minimum price filter" } },
+          { "name": "max", "in": "query", "schema": { "type": "number", "description": "Maximum price filter" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "description": "Page number for pagination" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "description": "Number of items per page" } }
         ],
-        "responses": { "200": { "description": "Paginated products" }, "404": { "description": "Brand not found" } }
+        "responses": { 
+          "200": { 
+            "description": "Paginated products with populated data", 
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "pagination": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          }, 
+          "404": { "description": "Brand not found" } 
+        }
       }
     },
     "/api/brands/{brandSlug}/products/list": {
@@ -404,22 +425,62 @@
     "/api/brands/{brandSlug}/categories/{categorySlug}/products": {
       "get": {
         "summary": "List products for a brand category",
+        "description": "Retrieve products for a specific brand and category with populated subcategory data.",
+        "tags": ["Brands", "Products"],
         "parameters": [
           { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
           { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } }
         ],
-        "responses": { "200": { "description": "Products for the specified brand and category" }, "404": { "description": "Brand or category not found" } }
+        "responses": { 
+          "200": { 
+            "description": "Products for the specified brand and category with populated data", 
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    }
+                  }
+                }
+              }
+            }
+          }, 
+          "404": { "description": "Brand or category not found" } 
+        }
       }
     },
     "/api/brands/{brandSlug}/categories/{categorySlug}/subcategories/{subcategorySlug}/products": {
       "get": {
         "summary": "List products for a brand subcategory",
+        "description": "Retrieve products for a specific brand, category, and subcategory with populated data.",
+        "tags": ["Brands", "Products"],
         "parameters": [
           { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } },
           { "name": "categorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "shirts" } },
           { "name": "subcategorySlug", "in": "path", "required": true, "schema": { "type": "string", "example": "polo" } }
         ],
-        "responses": { "200": { "description": "Products for the specified brand, category, and subcategory" }, "404": { "description": "Brand, category, or subcategory not found" } }
+        "responses": { 
+          "200": { 
+            "description": "Products for the specified brand, category, and subcategory with populated data", 
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    }
+                  }
+                }
+              }
+            }
+          }, 
+          "404": { "description": "Brand, category, or subcategory not found" } 
+        }
       }
     },
     "/api/catalog/products/ids": {
@@ -975,10 +1036,10 @@
       "Product": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
-          "brandId": { "type": "string" },
-          "categoryId": { "type": "string" },
-          "subcategoryId": { "type": "string" },
+          "_id": { "type": "string", "description": "Unique product identifier" },
+          "brandId": { "$ref": "#/components/schemas/PopulatedBrand" },
+          "categoryId": { "$ref": "#/components/schemas/PopulatedCategory" },
+          "subcategoryId": { "$ref": "#/components/schemas/PopulatedSubcategory" },
           "title": { "type": "string" },
           "slug": { "type": "string" },
           "description": { "type": "string" },
@@ -988,13 +1049,45 @@
           "attributes": { "type": "object", "additionalProperties": true },
           "stock": { "type": "number" },
           "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
-          "vendorId": { "type": "string" },
+          "vendorId": { "$ref": "#/components/schemas/PopulatedVendor" },
           "tags": { "type": "array", "items": { "type": "string" } },
           "featured": { "type": "boolean", "default": false },
           "bestseller": { "type": "boolean", "default": false },
           "newArrival": { "type": "boolean", "default": false },
           "createdAt": { "type": "string" },
           "updatedAt": { "type": "string" }
+        }
+      },
+      "PopulatedBrand": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" }
+        }
+      },
+      "PopulatedCategory": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" }
+        }
+      },
+      "PopulatedSubcategory": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" }
+        }
+      },
+      "PopulatedVendor": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" }
         }
       },
       "Subcategory": {
