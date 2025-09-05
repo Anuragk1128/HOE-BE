@@ -22,6 +22,9 @@ const ProductSchema = new Schema(
     status: { type: String, enum: ['active', 'draft', 'pending_approval'], default: 'active' },
     vendorId: { type: Types.ObjectId, ref: 'Vendor' },
     tags: [{ type: String }],
+    featured: { type: Boolean, default: false },
+    bestseller: { type: Boolean, default: false },
+    newArrival: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

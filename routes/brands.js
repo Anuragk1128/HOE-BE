@@ -84,6 +84,21 @@ router.get('/:brandSlug/products', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/brands/:brandSlug/products/list
+// Public endpoint: returns only the list of product titles for the given brand
+router.get('/:brandSlug/products/list', async (req, res, next) => {
+  try {
+    const { brandSlug } = req.params;
+    const brand = await Brand.findOne({ slug: brandSlug, active: true });
+    if (!brand) return res.status(404).json({ message: 'Brand not found' });
+
+    const products = await Product.find({ brandId: brand._id, status: 'active' }).select('title').sort({ createdAt: -1 });
+    // Return array of titles only
+    const titles = products.map(p => p.title);
+    res.json({ data: titles });
+  } catch (err) { next(err); }
+});
+
 // GET /api/brands/:brandSlug/categories/:categorySlug/products
 router.get('/:brandSlug/categories/:categorySlug/products', async (req, res, next) => {
   try {
