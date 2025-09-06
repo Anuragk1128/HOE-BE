@@ -84,18 +84,25 @@ router.get('/:brandSlug/products', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/brands/:brandSlug/products/list
-// Public endpoint: returns only the list of product titles for the given brand
-router.get('/:brandSlug/products/list', async (req, res, next) => {
+// GET /api/brands/:brandSlug/products/all
+// Public endpoint: returns all products for a brand (matching admin endpoint response format)
+router.get('/:brandSlug/products/all', async (req, res, next) => {
   try {
     const { brandSlug } = req.params;
+    
     const brand = await Brand.findOne({ slug: brandSlug, active: true });
     if (!brand) return res.status(404).json({ message: 'Brand not found' });
 
-    const products = await Product.find({ brandId: brand._id, status: 'active' }).select('title').sort({ createdAt: -1 });
-    // Return array of titles only
-    const titles = products.map(p => p.title);
-    res.json({ data: titles });
+    const filter = { brandId: brand._id };
+
+    const products = await Product.find(filter)
+      .populate('categoryId', 'name slug')
+      .populate('subcategoryId', 'name slug')
+      .select('-__v');
+
+    res.json({
+      data: products
+    });
   } catch (err) { next(err); }
 });
 

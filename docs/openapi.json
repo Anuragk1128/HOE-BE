@@ -394,16 +394,17 @@
         }
       }
     },
-    "/api/brands/{brandSlug}/products/list": {
+    "/api/brands/{brandSlug}/products/all": {
       "get": {
-        "summary": "List product titles for a brand (public)",
-        "description": "Returns only the list of product titles for the given brand slug. No pagination or category/subcategory fields.",
+        "summary": "Get all products for a brand (public)",
+        "description": "Returns all products for a specific brand with populated category and subcategory data. Matches admin endpoint response format.",
+        "tags": ["Brands", "Products"],
         "parameters": [
           { "name": "brandSlug", "in": "path", "required": true, "schema": { "type": "string", "example": "jerseymise" } }
         ],
         "responses": {
           "200": {
-            "description": "Array of product titles",
+            "description": "List of all products for the brand",
             "content": {
               "application/json": {
                 "schema": {
@@ -411,7 +412,7 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "type": "string", "example": "Classic White Tee" }
+                      "items": { "$ref": "#/components/schemas/Product" }
                     }
                   }
                 }
