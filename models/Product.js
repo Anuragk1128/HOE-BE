@@ -25,6 +25,8 @@ const ProductSchema = new Schema(
     featured: { type: Boolean, default: false },
     bestseller: { type: Boolean, default: false },
     newArrival: { type: Boolean, default: false },
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    numReviews: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
