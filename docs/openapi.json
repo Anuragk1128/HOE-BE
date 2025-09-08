@@ -1280,6 +1280,29 @@
           "404": { "description": "Product not found" }
         }
       }
+    },
+    "/api/wishlist/{productId}": {
+      "post": {
+        "summary": "Add product to wishlist (by path)",
+        "description": "Add a product to the authenticated user's wishlist by providing the product ID in the URL path.",
+        "tags": ["Wishlist"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "Product ID (Mongo ObjectId)",
+            "schema": { "type": "string", "format": "objectId", "example": "507f1f77bcf86cd799439011" }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Added to wishlist", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WishlistItem" } } } },
+          "200": { "description": "Already in wishlist (idempotent)", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "item": { "$ref": "#/components/schemas/WishlistItem" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Product not found" }
+        }
+      }
     }
   },
   "components": {
