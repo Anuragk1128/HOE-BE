@@ -60,6 +60,53 @@ router.post(
   }
 );
 
+// @route    POST api/reviews/product/:productId
+// @desc     Create a review using productId path param
+// @access   Private
+router.post(
+  '/product/:productId',
+  [
+    authRequired,
+    [
+      check('rating', 'Please include a rating between 1 and 5').isInt({ min: 1, max: 5 }),
+      check('comment', 'Please include a comment').not().isEmpty()
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const productId = req.params.productId;
+    try {
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ msg: 'Product not found' });
+      }
+
+      const existingReview = await Review.findOne({ product: productId, user: req.user.sub });
+      if (existingReview) {
+        return res.status(400).json({ msg: 'You have already reviewed this product' });
+      }
+
+      const review = new Review({
+        product: productId,
+        user: req.user.sub,
+        rating: req.body.rating,
+        comment: req.body.comment
+      });
+
+      await review.save();
+      await updateProductAverageRating(productId);
+      res.status(201).json(review);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  }
+);
+
 // @route    GET api/reviews/product/:productId
 // @desc     Get all reviews for a product
 // @access   Public

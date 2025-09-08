@@ -50,6 +50,7 @@
             "description": "ID of the product to retrieve",
             "schema": {
               "type": "string",
+              "format": "objectId",
               "example": "507f1f77bcf86cd799439011"
             }
           }
@@ -140,6 +141,7 @@
             "description": "ID of the product to retrieve",
             "schema": {
               "type": "string",
+              "format": "objectId",
               "example": "507f1f77bcf86cd799439011"
             }
           }
@@ -1047,7 +1049,9 @@
                 "properties": {
                   "product": {
                     "type": "string",
-                    "description": "ID of the product being reviewed"
+                    "format": "objectId",
+                    "description": "ID of the product being reviewed",
+                    "example": "507f1f77bcf86cd799439011"
                   },
                   "rating": {
                     "type": "integer",
@@ -1103,7 +1107,9 @@
             "required": true,
             "description": "ID of the product to get reviews for",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "objectId",
+              "example": "507f1f77bcf86cd799439011"
             }
           }
         ],
@@ -1120,6 +1126,73 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a review by productId",
+        "description": "Submit a new review for a product using productId in the path.",
+        "tags": ["Reviews"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "ID of the product to review",
+            "schema": {
+              "type": "string",
+              "format": "objectId",
+              "example": "507f1f77bcf86cd799439011"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating", "comment"],
+                "properties": {
+                  "rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "Rating from 1 to 5 stars"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "description": "Review comment (max 1000 characters)",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Review created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Review"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or user has already reviewed this product"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Product not found"
           },
           "500": {
             "description": "Server error"
@@ -1177,7 +1250,7 @@
                 "type": "object",
                 "required": ["product"],
                 "properties": {
-                  "product": { "type": "string", "description": "Product ID" }
+                  "product": { "type": "string", "description": "Product ID (Mongo ObjectId)", "example": "507f1f77bcf86cd799439011" }
                 }
               }
             }
