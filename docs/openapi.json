@@ -1237,6 +1237,23 @@
       }
     },
     "/api/wishlist": {
+      "get": {
+        "summary": "List current user's wishlist",
+        "description": "Returns all wishlist items for the authenticated user (most recent first)",
+        "tags": ["Wishlist"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Array of wishlist items",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/WishlistItem" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
       "post": {
         "summary": "Add product to wishlist",
         "description": "Add a product to the authenticated user's wishlist.",

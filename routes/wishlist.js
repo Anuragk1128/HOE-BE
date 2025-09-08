@@ -5,6 +5,17 @@ const { check, validationResult } = require('express-validator');
 const Product = require('../models/Product');
 const Wishlist = require('../models/Wishlist');
 
+// GET /api/wishlist - List wishlist for authenticated user
+router.get('/', [authRequired], async (req, res) => {
+  try {
+    const items = await Wishlist.find({ user: req.user.sub }).sort({ createdAt: -1 });
+    return res.json(items);
+  } catch (err) {
+    console.error('Wishlist list error:', err);
+    return res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 // POST /api/wishlist - Add a product to the authenticated user's wishlist
 router.post(
   '/',
