@@ -7,6 +7,64 @@ const { Types: { ObjectId } } = require('mongoose');
 
 const router = express.Router();
 
+// GET /api/catalog/categories - Get all categories with their subcategories
+router.get('/categories', async (req, res, next) => {
+  try {
+    // Get all active brands
+    const brands = await Brand.find({ active: true }).select('_id name slug');
+    
+    // Get all categories with their subcategories
+    const categories = await Category.aggregate([
+      {
+        $lookup: {
+          from: 'subcategories',
+          localField: '_id',
+          foreignField: 'categoryId',
+          as: 'subcategories',
+          pipeline: [
+            { $match: { status: 'active' } },
+            { $project: { _id: 1, name: 1, slug: 1, image: 1 } }
+          ]
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          slug: 1,
+          image: 1,
+          brandId: 1,
+          subcategories: 1
+        }
+      },
+      { $match: { 'subcategories.0': { $exists: true } } } // Only include categories with subcategories
+    ]);
+
+    // Group categories by brand
+    const result = brands.map(brand => ({
+      _id: brand._id,
+      name: brand.name,
+      slug: brand.slug,
+      categories: categories
+        .filter(cat => cat.brandId && cat.brandId.toString() === brand._id.toString())
+        .map(({ _id, name, slug, image, subcategories }) => ({
+          _id,
+          name,
+          slug,
+          image,
+          subcategories
+        }))
+    })).filter(brand => brand.categories.length > 0); // Only include brands with categories
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/catalog/products (combined across brands)
 router.get('/products', async (req, res, next) => {
   try {

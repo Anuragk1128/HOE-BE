@@ -10,6 +10,40 @@
     { "url": "http://localhost:{port}", "variables": { "port": { "default": "4000" } }, "description": "Local development server" }
   ],
   "paths": {
+    "/api/catalog/categories": {
+      "get": {
+        "summary": "Get all categories and subcategories",
+        "description": "Retrieve a hierarchical list of all active brands, their categories, and subcategories. Only includes categories that have subcategories and brands that have categories.",
+        "tags": ["Catalog"],
+        "responses": {
+          "200": {
+            "description": "Hierarchical list of brands, categories, and subcategories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/BrandWithCategories" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/products": {
       "get": {
         "summary": "Get all active products",
@@ -1307,6 +1341,49 @@
   },
   "components": {
     "schemas": {
+      "BrandWithCategories": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "description": "Brand ID" },
+          "name": { "type": "string", "description": "Brand name" },
+          "slug": { "type": "string", "description": "URL-friendly brand identifier" },
+          "categories": {
+            "type": "array",
+            "description": "List of categories belonging to this brand",
+            "items": { "$ref": "#/components/schemas/CategoryWithSubcategories" }
+          }
+        }
+      },
+      "CategoryWithSubcategories": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "description": "Category ID" },
+          "name": { "type": "string", "description": "Category name" },
+          "slug": { "type": "string", "description": "URL-friendly category identifier" },
+          "image": { "type": "string", "description": "URL to category image", "nullable": true },
+          "subcategories": {
+            "type": "array",
+            "description": "List of subcategories belonging to this category",
+            "items": { "$ref": "#/components/schemas/Subcategory" }
+          }
+        }
+      },
+      "Subcategory": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "description": "Subcategory ID" },
+          "name": { "type": "string", "description": "Subcategory name" },
+          "slug": { "type": "string", "description": "URL-friendly subcategory identifier" },
+          "image": { "type": "string", "description": "URL to subcategory image", "nullable": true }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string", "description": "Error message" }
+        }
+      },
       "Product": {
         "type": "object",
         "properties": {
