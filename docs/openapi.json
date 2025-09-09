@@ -851,7 +851,17 @@
                   "images": { "type": "array", "items": { "type": "string" } },
                   "price": { "type": "number" },
                   "compareAtPrice": { "type": "number" },
-                  "attributes": { "type": "object", "additionalProperties": true },
+                  "attributes": { 
+            "type": "object", 
+            "properties": {
+              "size": { "type": "array", "items": { "type": "string" } },
+              "color": { "type": "array", "items": { "type": "string" } },
+              "material": { "type": "string" },
+              "fit": { "type": "string" },
+              "styling": { "type": "string" }
+            },
+            "additionalProperties": true 
+          },
                   "stock": { "type": "number" },
                   "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
                   "vendorId": { "type": "string" },
@@ -893,7 +903,17 @@
                   "images": { "type": "array", "items": { "type": "string" } },
                   "price": { "type": "number" },
                   "compareAtPrice": { "type": "number" },
-                  "attributes": { "type": "object", "additionalProperties": true },
+                  "attributes": { 
+            "type": "object", 
+            "properties": {
+              "size": { "type": "array", "items": { "type": "string" } },
+              "color": { "type": "array", "items": { "type": "string" } },
+              "material": { "type": "string" },
+              "fit": { "type": "string" },
+              "styling": { "type": "string" }
+            },
+            "additionalProperties": true 
+          },
                   "stock": { "type": "number" },
                   "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
                   "tags": { "type": "array", "items": { "type": "string" } }
@@ -1397,7 +1417,17 @@
           "images": { "type": "array", "items": { "type": "string" } },
           "price": { "type": "number" },
           "compareAtPrice": { "type": "number" },
-          "attributes": { "type": "object", "additionalProperties": true },
+          "attributes": { 
+            "type": "object", 
+            "properties": {
+              "size": { "type": "array", "items": { "type": "string" } },
+              "color": { "type": "array", "items": { "type": "string" } },
+              "material": { "type": "string" },
+              "fit": { "type": "string" },
+              "styling": { "type": "string" }
+            },
+            "additionalProperties": true 
+          },
           "stock": { "type": "number" },
           "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
           "vendorId": { "$ref": "#/components/schemas/PopulatedVendor" },

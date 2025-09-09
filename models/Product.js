@@ -16,6 +16,7 @@ const ProductSchema = new Schema(
       color: [{ type: String }],
       material: { type: String },
       fit: { type: String },
+      styling: { type: String },
       // add brand-specific attributes as needed
     },
     stock: { type: Number, default: 0 },

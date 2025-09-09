@@ -10,10 +10,11 @@ const router = express.Router();
 // GET /api/catalog/categories - Get all categories with their subcategories
 router.get('/categories', async (req, res, next) => {
   try {
-    // Get all active brands
+    console.log('Fetching active brands...');
     const brands = await Brand.find({ active: true }).select('_id name slug');
+    console.log(`Found ${brands.length} active brands`);
     
-    // Get all categories with their subcategories
+    console.log('Fetching categories with subcategories...');
     const categories = await Category.aggregate([
       {
         $lookup: {
@@ -39,13 +40,16 @@ router.get('/categories', async (req, res, next) => {
       },
       { $match: { 'subcategories.0': { $exists: true } } } // Only include categories with subcategories
     ]);
+    
+    console.log(`Found ${categories.length} categories with subcategories`);
+    
+    if (categories.length > 0) {
+      console.log('Sample category with subcategories:', JSON.stringify(categories[0], null, 2));
+    }
 
     // Group categories by brand
-    const result = brands.map(brand => ({
-      _id: brand._id,
-      name: brand.name,
-      slug: brand.slug,
-      categories: categories
+    const result = brands.map(brand => {
+      const brandCategories = categories
         .filter(cat => cat.brandId && cat.brandId.toString() === brand._id.toString())
         .map(({ _id, name, slug, image, subcategories }) => ({
           _id,
@@ -53,8 +57,19 @@ router.get('/categories', async (req, res, next) => {
           slug,
           image,
           subcategories
-        }))
-    })).filter(brand => brand.categories.length > 0); // Only include brands with categories
+        }));
+        
+      console.log(`Brand ${brand.name} has ${brandCategories.length} categories`);
+      
+      return {
+        _id: brand._id,
+        name: brand.name,
+        slug: brand.slug,
+        categories: brandCategories
+      };
+    }).filter(brand => brand.categories.length > 0); // Only include brands with categories
+    
+    console.log(`Found ${result.length} brands with categories`);
 
     res.json({
       success: true,
