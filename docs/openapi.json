@@ -883,6 +883,7 @@
     "/api/admin/brands/{brandId}/categories/{categoryId}/subcategories/{subcategoryId}/products/{id}": {
       "patch": {
         "summary": "Update product (admin)",
+        "description": "Performs a partial update. Unspecified fields are preserved. The attributes object is deep-merged (existing keys are kept unless explicitly overwritten). For images and tags, empty arrays are ignored; only non-empty arrays replace existing values. Slug is sanitized and must be unique within the brand.",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "brandId", "in": "path", "required": true, "schema": { "type": "string" } },
