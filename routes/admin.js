@@ -253,12 +253,6 @@ router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryI
 router.patch('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryId/products/:id', async (req, res, next) => {
   try {
     const { brandId, categoryId, subcategoryId, id } = req.params;
-    const allowed = ['title','slug','description','images','price','compareAtPrice','attributes','stock','status','vendorId','tags','categoryId','subcategoryId'];
-    const updates = {};
-    for (const key of allowed) {
-      if (key in req.body) updates[key] = key === 'slug' ? slugify(req.body[key]) : req.body[key];
-    }
-    if (Object.keys(updates).length === 0) return res.status(400).json({ message: 'No fields to update' });
 
     // ensure hierarchy exists
     const brand = await Brand.findById(brandId);
@@ -268,14 +262,62 @@ router.patch('/brands/:brandId/categories/:categoryId/subcategories/:subcategory
     const sub = await Subcategory.findOne({ _id: subcategoryId, brandId, categoryId });
     if (!sub) return res.status(404).json({ message: 'Subcategory not found for this category' });
 
+    // fetch existing product to allow merging and preserving unspecified fields
+    const existing = await Product.findOne({ _id: id, brandId, categoryId, subcategoryId });
+    if (!existing) return res.status(404).json({ message: 'Product not found for this path' });
+
+    const allowed = ['title','slug','description','images','price','compareAtPrice','attributes','stock','status','vendorId','tags','categoryId','subcategoryId'];
+    const updates = {};
+
+    for (const key of allowed) {
+      if (!(key in req.body)) continue;
+
+      // Skip empty string updates to preserve previous values
+      if (typeof req.body[key] === 'string' && req.body[key].trim() === '') {
+        continue;
+      }
+
+      if (key === 'slug') {
+        const slugVal = req.body.slug;
+        if (typeof slugVal === 'string' && slugVal.trim() !== '') {
+          updates.slug = slugify(slugVal);
+        }
+        continue;
+      }
+
+      // Deep-merge for attributes object to avoid wiping existing keys
+      if (key === 'attributes' && req.body.attributes && typeof req.body.attributes === 'object') {
+        const currentAttrs = (existing.attributes && typeof existing.attributes === 'object') ? existing.attributes : {};
+        updates.attributes = { ...currentAttrs, ...req.body.attributes };
+        continue;
+      }
+
+      // Only update images/tags if a non-empty array is provided; otherwise keep previous values
+      if ((key === 'images' || key === 'tags') && Array.isArray(req.body[key])) {
+        if (req.body[key].length > 0) {
+          updates[key] = req.body[key];
+        }
+        continue;
+      }
+
+      // default assignment for other scalar fields
+      updates[key] = req.body[key];
+    }
+
+    if (Object.keys(updates).length === 0) return res.status(400).json({ message: 'No fields to update' });
+
     // If slug is changing, check uniqueness within brand
     if (updates.slug) {
       const exists = await Product.findOne({ brandId, slug: updates.slug, _id: { $ne: id } });
       if (exists) return res.status(409).json({ message: 'Slug already exists for this brand' });
     }
 
-    const product = await Product.findOneAndUpdate({ _id: id, brandId, categoryId, subcategoryId }, updates, { new: true });
-    if (!product) return res.status(404).json({ message: 'Product not found for this path' });
+    const product = await Product.findOneAndUpdate(
+      { _id: id, brandId, categoryId, subcategoryId },
+      updates,
+      { new: true }
+    );
+
     res.json({ data: product });
   } catch (err) { next(err); }
 });
