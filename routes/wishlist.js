@@ -84,3 +84,22 @@ router.post(
     }
   }
 );
+
+// DELETE /api/wishlist/:productId - Remove a product from the authenticated user's wishlist
+router.delete(
+  '/:productId',
+  [authRequired],
+  async (req, res) => {
+    const product = req.params.productId;
+    try {
+      const result = await Wishlist.deleteOne({ user: req.user.sub, product });
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ message: 'Item not found in wishlist' });
+      }
+      return res.status(204).send();
+    } catch (err) {
+      console.error('Wishlist remove error:', err);
+      return res.status(500).json({ message: 'Server Error' });
+    }
+  }
+);
