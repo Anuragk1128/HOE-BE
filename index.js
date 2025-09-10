@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/admin');
 const productsRoutes = require('./routes/products');
 const wishlistRoutes = require('./routes/wishlist');
 const reviewsRoutes = require('./routes/reviews');
+const cartRoutes = require('./routes/cart');
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/api/catalog', catalogRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/cart', cartRoutes);
 
 // 404 handler for unknown API routes (Express 5 safe catch-all)
 app.use('/api', (req, res) => res.status(404).json({ message: 'Route not found' }));

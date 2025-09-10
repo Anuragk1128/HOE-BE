@@ -10,6 +10,103 @@
     { "url": "http://localhost:{port}", "variables": { "port": { "default": "4000" } }, "description": "Local development server" }
   ],
   "paths": {
+    "/api/cart": {
+      "get": {
+        "summary": "List current user's cart items",
+        "description": "Returns all cart items for the authenticated user (most recent first)",
+        "tags": ["Cart"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Array of cart items",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CartItem" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Add product to cart (or increase quantity)",
+        "description": "Add a product to the authenticated user's cart. If the product already exists, the quantity is increased.",
+        "tags": ["Cart"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product"],
+                "properties": {
+                  "product": { "type": "string", "description": "Product ID (Mongo ObjectId)", "example": "507f1f77bcf86cd799439011" },
+                  "quantity": { "type": "integer", "minimum": 1, "default": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Added to cart or quantity increased", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CartItem" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Product not found" }
+        }
+      }
+    },
+    "/api/cart/{productId}": {
+      "post": {
+        "summary": "Add product to cart by path (quantity optional)",
+        "tags": ["Cart"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "Product ID (Mongo ObjectId)",
+            "schema": { "type": "string", "format": "objectId", "example": "507f1f77bcf86cd799439011" }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "quantity": { "type": "integer", "minimum": 1, "default": 1 } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Added to cart or quantity increased", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CartItem" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Product not found" }
+        }
+      },
+      "delete": {
+        "summary": "Remove product from cart",
+        "description": "Remove the specified product from the authenticated user's cart.",
+        "tags": ["Cart"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "Product ID (Mongo ObjectId)",
+            "schema": { "type": "string", "format": "objectId", "example": "507f1f77bcf86cd799439011" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Removed from cart (No Content)" },
+          "404": { "description": "Item not found in cart" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
     "/api/catalog/categories": {
       "get": {
         "summary": "Get all categories and subcategories",
@@ -1356,6 +1453,27 @@
           "200": { "description": "Already in wishlist (idempotent)", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "item": { "$ref": "#/components/schemas/WishlistItem" } } } } } },
           "401": { "description": "Unauthorized" },
           "404": { "description": "Product not found" }
+        }
+      },
+      "delete": {
+        "summary": "Remove product from wishlist",
+        "description": "Remove the specified product from the authenticated user's wishlist.",
+        "tags": ["Wishlist"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "Product ID (Mongo ObjectId)",
+            "schema": { "type": "string", "format": "objectId", "example": "507f1f77bcf86cd799439011" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Removed from wishlist (No Content)" },
+          "404": { "description": "Item not found in wishlist" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Server error" }
         }
       }
     }
