@@ -107,6 +107,66 @@
         }
       }
     },
+    "/api/users/me": {
+      "get": {
+        "summary": "Get current user's profile",
+        "description": "Fetch the authenticated user's profile details for the account page.",
+        "tags": ["Users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "user": { "$ref": "#/components/schemas/User" } }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        }
+      },
+      "patch": {
+        "summary": "Update current user's profile",
+        "description": "Update name, phone, and address fields for the authenticated user. Email, role, and password cannot be changed here.",
+        "tags": ["Users"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "phone": { "type": "string" },
+                  "address": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "user": { "$ref": "#/components/schemas/User" } }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation error or no updatable fields" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "User not found" }
+        }
+      }
+    },
     "/api/catalog/categories": {
       "get": {
         "summary": "Get all categories and subcategories",
@@ -1614,7 +1674,17 @@
       "TokenOnly": { "type": "object", "properties": { "token": { "type": "string" } } },
       "User": {
         "type": "object",
-        "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "email": { "type": "string" }, "role": { "type": "string", "enum": ["customer", "vendor", "admin"] } }
+        "properties": {
+          "_id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["customer", "vendor", "admin"] },
+          "isActive": { "type": "boolean" },
+          "phone": { "type": "string" },
+          "address": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
       },
       "Vendor": {
         "type": "object",
