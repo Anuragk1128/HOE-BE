@@ -523,6 +523,59 @@
         }
       }
     },
+    "/api/auth/google-login": {
+      "post": {
+        "summary": "Login with Google OAuth (customers only)",
+        "description": "Authenticate using Google OAuth token. Creates new customer account or links to existing account. Only available for customers.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": { 
+                    "type": "string", 
+                    "description": "Google ID token from client-side authentication",
+                    "example": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE2NzI4OTQ2NzI..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { 
+            "description": "Successfully authenticated with Google", 
+            "content": { 
+              "application/json": { 
+                "schema": { 
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string", "description": "JWT token for API authentication" },
+                    "user": { 
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "email": { "type": "string" },
+                        "role": { "type": "string", "enum": ["customer"] },
+                        "avatar": { "type": "string", "description": "Google profile picture URL" }
+                      }
+                    }
+                  }
+                } 
+              } 
+            } 
+          },
+          "400": { "description": "Missing or invalid Google token" },
+          "401": { "description": "Google authentication failed" },
+          "409": { "description": "Email already linked to different Google account" }
+        }
+      }
+    },
     "/api/brands": {
       "get": {
         "summary": "List active brands",
@@ -1682,6 +1735,9 @@
           "isActive": { "type": "boolean" },
           "phone": { "type": "string" },
           "address": { "type": "string" },
+          "googleId": { "type": "string", "description": "Google OAuth ID (only for Google users)" },
+          "authProvider": { "type": "string", "enum": ["local", "google"], "description": "Authentication method used" },
+          "avatar": { "type": "string", "description": "Profile picture URL (from Google or custom)" },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
         }

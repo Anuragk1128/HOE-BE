@@ -12,11 +12,15 @@ const UserSchema = new Schema(
       trim: true,
       validate: [validator.isEmail, 'Invalid email'],
     },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: function() { return this.authProvider === 'local'; } },
     role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer', index: true },
     isActive: { type: Boolean, default: true },
     phone: { type: String, trim: true },
     address: { type: String, trim: true },
+    // Google OAuth fields
+    googleId: { type: String, unique: true, sparse: true },
+    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
+    avatar: { type: String, trim: true },
   },
   { timestamps: true }
 );
