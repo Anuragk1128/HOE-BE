@@ -135,77 +135,127 @@ router.post('/admin/create', async (req, res, next) => {
 
 // POST /api/auth/google-login (customer only)
 router.post('/google-login', async (req, res, next) => {
+  console.log('=== GOOGLE LOGIN ENDPOINT CALLED ===');
+  
   try {
+    // Set JSON content type immediately
+    res.setHeader('Content-Type', 'application/json');
+    
     const { token } = req.body;
-    if (!token) return res.status(400).json({ message: 'Google token is required' });
-
-    // Verify Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    console.log('1. Token received:', token ? 'Yes' : 'No');
+    console.log('2. Token length:', token ? token.length : 0);
     
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
-    
-    if (!email || !name) {
-      return res.status(400).json({ message: 'Invalid Google token - missing required fields' });
+    if (!token) {
+      console.log('3. ERROR: No token provided');
+      return res.status(400).json({ message: 'Google token is required' });
     }
 
-    // Check if user exists by email OR googleId
-    let user = await User.findOne({
-      $or: [{ email: email.toLowerCase() }, { googleId }]
-    });
-    
-    if (user) {
-      // Check if email is already linked to a different Google account
-      if (user.email === email.toLowerCase() && user.googleId && user.googleId !== googleId) {
-        return res.status(409).json({ message: 'Email already linked to a different Google account' });
-      }
+    // Verify Google token
+    console.log('4. Verifying token with Google...');
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      console.log('5. Token verification successful');
       
-      // Check if Google ID is already linked to a different email
-      if (user.googleId === googleId && user.email !== email.toLowerCase()) {
-        return res.status(409).json({ message: 'Google account already linked to a different email' });
+      const payload = ticket.getPayload();
+      const { sub: googleId, email, name, picture } = payload;
+      
+      console.log('6. Google user data:', { 
+        googleId, 
+        email, 
+        name: name ? 'Received' : 'Missing',
+        picture: picture ? 'Received' : 'Missing' 
+      });
+      
+      if (!email || !name) {
+        console.log('7. ERROR: Missing required fields from Google');
+        return res.status(400).json({ message: 'Invalid Google token - missing required fields' });
       }
 
-      // Update existing user with Google info if needed
-      if (!user.googleId) {
-        user.googleId = googleId;
-        user.authProvider = 'google';
-        user.avatar = picture;
-        await user.save();
+      // Check if user exists
+      console.log('8. Checking if user exists...');
+      let user = await User.findOne({
+        $or: [{ email: email.toLowerCase() }, { googleId }]
+      });
+      
+      if (user) {
+        console.log('9. Existing user found:', user.email);
+        
+        // Update existing user logic
+        if (!user.googleId) {
+          console.log('10. Updating existing user with Google info...');
+          user.googleId = googleId;
+          user.authProvider = 'google';
+          user.avatar = picture;
+          await user.save();
+          console.log('11. User updated successfully');
+        }
+      } else {
+        console.log('12. No existing user found - creating new user...');
+        try {
+          user = await User.create({
+            name,
+            email: email.toLowerCase(),
+            googleId,
+            authProvider: 'google',
+            avatar: picture,
+            role: 'customer',
+            passwordHash: null,
+          });
+          console.log('13. New user created successfully:', user.email);
+        } catch (createError) {
+          console.error('14. ERROR creating user:', createError);
+          return res.status(500).json({ 
+            message: 'Failed to create user account',
+            error: createError.message 
+          });
+        }
       }
-    } else {
-      // Create new user with Google info (customers only)
-      user = await User.create({
-        name,
-        email: email.toLowerCase(),
-        googleId,
-        authProvider: 'google',
-        avatar: picture,
-        role: 'customer',
-        passwordHash: null, // No password for Google users
+      
+      // Generate JWT token
+      console.log('15. Generating JWT token...');
+      const jwtToken = signToken(user);
+      console.log('16. JWT token generated successfully');
+      
+      const responseData = {
+        token: jwtToken,
+        user: { 
+          id: user._id, 
+          name: user.name, 
+          email: user.email, 
+          role: user.role,
+          avatar: user.avatar
+        }
+      };
+      
+      console.log('17. Sending success response');
+      console.log('18. Response data structure:', Object.keys(responseData));
+      
+      res.json(responseData);
+      
+    } catch (verificationError) {
+      console.error('19. Google token verification failed:', verificationError.message);
+      return res.status(401).json({ 
+        message: 'Invalid Google token',
+        error: verificationError.message 
       });
     }
     
-    // Generate JWT token using existing function
-    const jwtToken = signToken(user);
-    
-    res.json({
-      token: jwtToken,
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
-        role: user.role,
-        avatar: user.avatar
-      }
-    });
-    
   } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(401).json({ message: 'Google authentication failed' });
+    console.error('20. UNEXPECTED ERROR in google-login:', error);
+    console.error('21. Error stack:', error.stack);
+    
+    // Ensure we always send JSON response
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        message: 'Internal server error during authentication',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Authentication failed'
+      });
+    }
   }
 });
+
 
 module.exports = router;
