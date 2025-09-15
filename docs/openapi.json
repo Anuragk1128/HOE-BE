@@ -1429,51 +1429,6 @@
                     "maximum": 5,
                     "description": "Rating from 1 to 5 stars"
                   },
-      "ShipmentDetails": {
-        "type": "object",
-        "properties": {
-          "shipyaariOrderId": { "type": "string" },
-          "awbNumber": { "type": "string" },
-          "courierPartner": { "type": "string" },
-          "trackingUrl": { "type": "string" },
-          "shipmentStatus": { "type": "string", "enum": ["pending", "processing", "shipped", "in_transit", "out_for_delivery", "delivered", "failed", "cancelled"] },
-          "estimatedDeliveryDate": { "type": "string", "format": "date-time" },
-          "actualDeliveryDate": { "type": "string", "format": "date-time" },
-          "shipmentError": { "type": "string" },
-          "trackingHistory": { "type": "array", "items": { "$ref": "#/components/schemas/TrackingEvent" } },
-          "shippingLabel": { "$ref": "#/components/schemas/ShippingLabel" },
-          "cancellation": { "$ref": "#/components/schemas/ShipmentCancellation" },
-          "lastTrackingUpdate": { "$ref": "#/components/schemas/TrackingEvent" }
-        }
-      },
-      "TrackingEvent": {
-        "type": "object",
-        "properties": {
-          "status": { "type": "string" },
-          "location": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" },
-          "description": { "type": "string" },
-          "updatedAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "ShippingLabel": {
-        "type": "object",
-        "properties": {
-          "labelUrl": { "type": "string" },
-          "invoiceUrl": { "type": "string" },
-          "manifestUrl": { "type": "string" },
-          "generatedAt": { "type": "string", "format": "date-time" }
-        }
-      },
-      "ShipmentCancellation": {
-        "type": "object",
-        "properties": {
-          "isCancelled": { "type": "boolean" },
-          "cancelledAt": { "type": "string", "format": "date-time" },
-          "cancelReason": { "type": "string" },
-          "cancelledBy": { "type": "string", "enum": ["customer", "admin", "system"] }
-        }
-      }
                   "comment": {
                     "type": "string",
                     "description": "Review comment (max 1000 characters)",
@@ -2157,6 +2112,51 @@
           "latitude": { "type": "string" },
           "longitude": { "type": "string" },
           "landmark": { "type": "string" }
+        }
+      },
+      "ShipmentDetails": {
+        "type": "object",
+        "properties": {
+          "shipyaariOrderId": { "type": "string" },
+          "awbNumber": { "type": "string" },
+          "courierPartner": { "type": "string" },
+          "trackingUrl": { "type": "string" },
+          "shipmentStatus": { "type": "string", "enum": ["pending", "processing", "shipped", "in_transit", "out_for_delivery", "delivered", "failed", "cancelled"] },
+          "estimatedDeliveryDate": { "type": "string", "format": "date-time" },
+          "actualDeliveryDate": { "type": "string", "format": "date-time" },
+          "shipmentError": { "type": "string" },
+          "trackingHistory": { "type": "array", "items": { "$ref": "#/components/schemas/TrackingEvent" } },
+          "shippingLabel": { "$ref": "#/components/schemas/ShippingLabel" },
+          "cancellation": { "$ref": "#/components/schemas/ShipmentCancellation" },
+          "lastTrackingUpdate": { "$ref": "#/components/schemas/TrackingEvent" }
+        }
+      },
+      "TrackingEvent": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "location": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "description": { "type": "string" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ShippingLabel": {
+        "type": "object",
+        "properties": {
+          "labelUrl": { "type": "string" },
+          "invoiceUrl": { "type": "string" },
+          "manifestUrl": { "type": "string" },
+          "generatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ShipmentCancellation": {
+        "type": "object",
+        "properties": {
+          "isCancelled": { "type": "boolean" },
+          "cancelledAt": { "type": "string", "format": "date-time" },
+          "cancelReason": { "type": "string" },
+          "cancelledBy": { "type": "string", "enum": ["customer", "admin", "system"] }
         }
       }
     },

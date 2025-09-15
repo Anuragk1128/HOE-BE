@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Order = require('../models/Order');
-const shipyaariService = require('../services/shipyaariService');
+const shipyaariService = require('../services/shipyariServices');
 
 // Razorpay webhook handler
 router.post('/razorpay', async (req, res) => {
