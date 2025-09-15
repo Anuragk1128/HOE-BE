@@ -59,7 +59,7 @@ const RazorpayPaymentSchema = new Schema(
   { _id: false }
 );
 
-// Shipment Details Schema
+// Shipment Details Schema (Enhanced)
 const ShipmentSchema = new Schema(
   {
     shipyaariOrderId: { type: String },
@@ -68,12 +68,56 @@ const ShipmentSchema = new Schema(
     trackingUrl: { type: String },
     shipmentStatus: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'in_transit', 'delivered', 'failed'],
+      enum: [
+        'pending',
+        'processing',
+        'shipped',
+        'in_transit',
+        'out_for_delivery',
+        'delivered',
+        'failed',
+        'cancelled'
+      ],
       default: 'pending'
     },
     estimatedDeliveryDate: { type: Date },
-    actualDeliveryDate: { type: Date }, 
-    shipmentError: { type: String }
+    actualDeliveryDate: { type: Date },
+    shipmentError: { type: String },
+
+    // NEW: Add tracking history entries
+    trackingHistory: [
+      {
+        status: String,
+        location: String,
+        timestamp: Date,
+        description: String,
+        updatedAt: { type: Date, default: Date.now }
+      }
+    ],
+
+    // NEW: Label and document URLs
+    shippingLabel: {
+      labelUrl: String,
+      invoiceUrl: String,
+      manifestUrl: String,
+      generatedAt: Date
+    },
+
+    // NEW: Cancellation details
+    cancellation: {
+      isCancelled: { type: Boolean, default: false },
+      cancelledAt: Date,
+      cancelReason: String,
+      cancelledBy: String // 'customer', 'admin', 'system'
+    },
+
+    // NEW: Last tracking update snapshot
+    lastTrackingUpdate: {
+      status: String,
+      location: String,
+      timestamp: Date,
+      description: String
+    }
   },
   { _id: false }
 );
@@ -225,5 +269,8 @@ OrderSchema.index({ user: 1, status: 1 });
 OrderSchema.index({ orderId: 1 });
 OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ 'razorpayDetails.razorpayOrderId': 1 });
+// Indexes for shipment lookups
+OrderSchema.index({ 'shipmentDetails.awbNumber': 1 });
+OrderSchema.index({ 'shipmentDetails.shipmentStatus': 1 });
 
 module.exports = model('Order', OrderSchema);

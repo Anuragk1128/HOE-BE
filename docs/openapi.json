@@ -1429,6 +1429,51 @@
                     "maximum": 5,
                     "description": "Rating from 1 to 5 stars"
                   },
+      "ShipmentDetails": {
+        "type": "object",
+        "properties": {
+          "shipyaariOrderId": { "type": "string" },
+          "awbNumber": { "type": "string" },
+          "courierPartner": { "type": "string" },
+          "trackingUrl": { "type": "string" },
+          "shipmentStatus": { "type": "string", "enum": ["pending", "processing", "shipped", "in_transit", "out_for_delivery", "delivered", "failed", "cancelled"] },
+          "estimatedDeliveryDate": { "type": "string", "format": "date-time" },
+          "actualDeliveryDate": { "type": "string", "format": "date-time" },
+          "shipmentError": { "type": "string" },
+          "trackingHistory": { "type": "array", "items": { "$ref": "#/components/schemas/TrackingEvent" } },
+          "shippingLabel": { "$ref": "#/components/schemas/ShippingLabel" },
+          "cancellation": { "$ref": "#/components/schemas/ShipmentCancellation" },
+          "lastTrackingUpdate": { "$ref": "#/components/schemas/TrackingEvent" }
+        }
+      },
+      "TrackingEvent": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "location": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "description": { "type": "string" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ShippingLabel": {
+        "type": "object",
+        "properties": {
+          "labelUrl": { "type": "string" },
+          "invoiceUrl": { "type": "string" },
+          "manifestUrl": { "type": "string" },
+          "generatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ShipmentCancellation": {
+        "type": "object",
+        "properties": {
+          "isCancelled": { "type": "boolean" },
+          "cancelledAt": { "type": "string", "format": "date-time" },
+          "cancelReason": { "type": "string" },
+          "cancelledBy": { "type": "string", "enum": ["customer", "admin", "system"] }
+        }
+      }
                   "comment": {
                     "type": "string",
                     "description": "Review comment (max 1000 characters)",
@@ -1710,6 +1755,51 @@
         "responses": {
           "200": { "description": "Shipment details set", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Order" } } } },
           "400": { "description": "Validation error" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Order not found" }
+        }
+      }
+    },
+    "/api/orders/{id}/tracking": {
+      "get": {
+        "summary": "Get advanced tracking for a specific order",
+        "tags": ["Orders"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [ { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } } ],
+        "responses": {
+          "200": { "description": "Tracking details", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "tracking": { "type": "object", "properties": { "orderNumber": { "type": "string" }, "awbNumber": { "type": "string" }, "currentStatus": { "type": "string" }, "trackingHistory": { "type": "array", "items": { "$ref": "#/components/schemas/TrackingEvent" } } } } } } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Order not found" }
+        }
+      }
+    },
+    "/api/orders/{id}/cancel-shipment": {
+      "post": {
+        "summary": "Cancel shipment for an order (owner or admin)",
+        "tags": ["Orders"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [ { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } } ],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object", "properties": { "reason": { "type": "string" } } } } } },
+        "responses": {
+          "200": { "description": "Shipment cancelled", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" } } } } } },
+          "400": { "description": "No shipment to cancel" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Order not found" }
+        }
+      }
+    },
+    "/api/orders/{id}/generate-label": {
+      "post": {
+        "summary": "Generate shipping labels (admin)",
+        "tags": ["Orders"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [ { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } } ],
+        "responses": {
+          "200": { "description": "Labels generated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "labels": { "$ref": "#/components/schemas/ShippingLabel" } } } } } },
+          "400": { "description": "No AWB number found" },
           "401": { "description": "Unauthorized" },
           "403": { "description": "Forbidden" },
           "404": { "description": "Order not found" }

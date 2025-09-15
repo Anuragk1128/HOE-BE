@@ -19,6 +19,7 @@ const wishlistRoutes = require('./routes/wishlist');
 const reviewsRoutes = require('./routes/reviews');
 const cartRoutes = require('./routes/cart');
 const ordersRoutes = require('./routes/orders');
+const webHookRoutes = require('./routes/webHook');
 const addressesRoutes = require('./routes/addresses');
 const usersRoutes = require('./routes/users');
 
@@ -77,6 +78,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/webhook', webHookRoutes);
 app.use('/api/addresses', addressesRoutes);
 app.use('/api/users', usersRoutes);
 
