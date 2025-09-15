@@ -3,6 +3,7 @@ const { check, validationResult } = require('express-validator');
 const { authRequired, requireRoles } = require('../middleware/auth');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
 
 const router = express.Router();
 
@@ -20,19 +21,45 @@ router.post(
       check('items').isArray({ min: 1 }).withMessage('Items array is required'),
       check('items.*.product').isString().notEmpty().withMessage('Each item must have product id'),
       check('items.*.quantity').optional().isInt({ min: 1 }).withMessage('Quantity must be >= 1'),
-      check('shippingAddress.fullName').isString().notEmpty(),
-      check('shippingAddress.addressLine1').isString().notEmpty(),
-      check('shippingAddress.city').isString().notEmpty(),
-      check('shippingAddress.postalCode').isString().notEmpty(),
-      check('shippingAddress.country').isString().notEmpty(),
-      check('paymentMethod').optional().isIn(['cod', 'card', 'paypal', 'stripe'])
+
+      // Customer details
+      check('customerDetails.name').isString().notEmpty(),
+      check('customerDetails.email').isString().notEmpty(),
+      check('customerDetails.mobile').isString().notEmpty(),
+
+      // Address selection: either addressId or full shippingAddress must be provided
+      check('addressId').optional().isString(),
+      check('billingAddressId').optional().isString(),
+      check('shippingAddress').optional().isObject(),
+      check('billingAddress').optional().isObject(),
+      check('shippingAddress').custom((value, { req }) => {
+        if (req.body.addressId) return true; // using saved address
+        // Require full address fields if not using saved address
+        const a = value || {};
+        const required = ['fullName','addressLine1','city','state','postalCode','country','phone'];
+        const missing = required.filter(k => !a || typeof a[k] !== 'string' || a[k].trim().length === 0);
+        if (missing.length) {
+          throw new Error(`shippingAddress missing fields: ${missing.join(', ')}`);
+        }
+        return true;
+      }),
+
+      // Seller details (required for Shipyaari)
+      check('sellerDetails.address.fullAddress').isString().notEmpty(),
+      check('sellerDetails.address.pincode').isInt().toInt(),
+      check('sellerDetails.address.city').isString().notEmpty(),
+      check('sellerDetails.address.state').isString().notEmpty(),
+      check('sellerDetails.contact.name').isString().notEmpty(),
+      check('sellerDetails.contact.mobile').isInt().toInt(),
+
+      check('paymentMethod').optional().isIn(['online', 'cod', 'wallet'])
     ]
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { items, shippingAddress, paymentMethod = 'cod', shippingPrice = 0, taxPrice = 0 } = req.body;
+    const { items, shippingAddress, billingAddress, addressId, billingAddressId, customerDetails, sellerDetails, paymentMethod = 'online', shippingPrice = 0, taxPrice = 0, orderNotes, specialInstructions, insurance } = req.body;
 
     try {
       // Fetch products to validate and get current price/title/image
@@ -52,8 +79,60 @@ router.post(
           image: Array.isArray(prod.images) && prod.images.length ? prod.images[0] : undefined,
           price: prod.price,
           quantity: qty,
+          // Optional Shipyaari specific fields if provided by client, else defaults from schema
+          sku: i.sku || prod.sku,
+          category: i.category || prod.shippingCategory,
+          weight: typeof i.weight !== 'undefined' ? i.weight : (typeof prod.weightKg === 'number' ? prod.weightKg : undefined),
+          dimensions: i.dimensions || (prod.dimensionsCm ? { length: prod.dimensionsCm.length, breadth: prod.dimensionsCm.breadth, height: prod.dimensionsCm.height } : undefined),
+          hsnCode: i.hsnCode || prod.hsnCode,
         });
       }
+
+      // Resolve addresses: load from user's saved addresses if IDs provided
+      let resolvedShipping = shippingAddress;
+      let resolvedBilling = billingAddress;
+      if (addressId || billingAddressId) {
+        const user = await User.findById(req.user.sub).select('addresses');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        const findAddr = (id) => (user.addresses || []).id(id);
+        if (addressId) {
+          const a = findAddr(addressId);
+          if (!a) return res.status(400).json({ message: 'Invalid addressId' });
+          resolvedShipping = {
+            fullName: a.fullName,
+            addressLine1: a.addressLine1,
+            addressLine2: a.addressLine2,
+            city: a.city,
+            state: a.state,
+            postalCode: a.postalCode,
+            country: a.country,
+            phone: a.phone,
+            latitude: a.latitude,
+            longitude: a.longitude,
+            landmark: a.landmark,
+          };
+        }
+        if (billingAddressId) {
+          const b = findAddr(billingAddressId);
+          if (!b) return res.status(400).json({ message: 'Invalid billingAddressId' });
+          resolvedBilling = {
+            fullName: b.fullName,
+            addressLine1: b.addressLine1,
+            addressLine2: b.addressLine2,
+            city: b.city,
+            state: b.state,
+            postalCode: b.postalCode,
+            country: b.country,
+            phone: b.phone,
+            latitude: b.latitude,
+            longitude: b.longitude,
+            landmark: b.landmark,
+          };
+        }
+      }
+
+      // If billing not provided, default to shipping
+      if (!resolvedBilling && resolvedShipping) resolvedBilling = resolvedShipping;
 
       const itemsPrice = normItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
       const totalPrice = itemsPrice + Number(shippingPrice || 0) + Number(taxPrice || 0);
@@ -61,12 +140,19 @@ router.post(
       const order = await Order.create({
         user: req.user.sub,
         items: normItems,
-        shippingAddress,
+        shippingAddress: resolvedShipping,
+        billingAddress: resolvedBilling,
+        customerDetails,
+        sellerDetails,
         paymentMethod,
         itemsPrice,
         shippingPrice: Number(shippingPrice || 0),
         taxPrice: Number(taxPrice || 0),
         totalPrice,
+        currency: 'INR',
+        orderNotes,
+        specialInstructions,
+        insurance: Boolean(insurance),
       });
 
       return res.status(201).json(order);
@@ -104,13 +190,16 @@ router.get('/:id', [authRequired], async (req, res) => {
 // PATCH /api/orders/:id/pay - Mark as paid (owner) and save payment result
 router.patch(
   '/:id/pay',
-  [authRequired, [
-    check('paymentResult').optional().isObject(),
-    check('paymentResult.id').optional().isString(),
-    check('paymentResult.status').optional().isString(),
-    check('paymentResult.update_time').optional().isString(),
-    check('paymentResult.email_address').optional().isString(),
-  ]],
+  [
+    authRequired,
+    [
+      check('razorpayOrderId').isString().notEmpty(),
+      check('razorpayPaymentId').isString().notEmpty(),
+      check('razorpaySignature').isString().notEmpty(),
+      check('paymentMethod').optional().isIn(['online', 'cod', 'wallet']),
+      check('paymentStatus').optional().isIn(['pending', 'authorized', 'captured', 'failed'])
+    ]
+  ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -120,9 +209,17 @@ router.patch(
       if (!order) return res.status(404).json({ message: 'Order not found' });
       if (!isOwnerOrAdmin(req, order)) return res.status(403).json({ message: 'Forbidden' });
 
+      // Save Razorpay payment details
+      order.razorpayDetails = {
+        razorpayOrderId: req.body.razorpayOrderId,
+        razorpayPaymentId: req.body.razorpayPaymentId,
+        razorpaySignature: req.body.razorpaySignature,
+        paymentMethod: req.body.paymentMethod || 'online',
+        paymentStatus: req.body.paymentStatus || 'captured'
+      };
+
       order.status = 'paid';
       order.paidAt = new Date();
-      if (req.body.paymentResult) order.paymentResult = req.body.paymentResult;
       await order.save();
 
       return res.json(order);
@@ -144,7 +241,7 @@ router.post(
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ message: 'Order not found' });
       if (!isOwnerOrAdmin(req, order)) return res.status(403).json({ message: 'Forbidden' });
-      if (['shipped', 'delivered', 'cancelled'].includes(order.status)) {
+      if (['processing', 'shipped', 'in_transit', 'delivered', 'cancelled'].includes(order.status)) {
         return res.status(400).json({ message: `Cannot cancel order in status: ${order.status}` });
       }
       order.status = 'cancelled';
@@ -173,7 +270,7 @@ router.get('/', [authRequired, requireRoles('admin')], async (req, res) => {
 // ADMIN: PATCH /api/orders/:id/status - Update status (paid/shipped/delivered)
 router.patch(
   '/:id/status',
-  [authRequired, requireRoles('admin'), [check('status').isIn(['pending', 'paid', 'shipped', 'delivered', 'cancelled'])]],
+  [authRequired, requireRoles('admin'), [check('status').isIn(['pending', 'confirmed', 'paid', 'processing', 'shipped', 'in_transit', 'delivered', 'cancelled'])]],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -189,6 +286,51 @@ router.patch(
       return res.json(order);
     } catch (err) {
       console.error('Admin update status error:', err);
+      return res.status(500).json({ message: 'Server Error' });
+    }
+  }
+);
+
+// ADMIN: POST /api/orders/:id/ship - Set shipment details (Shipyaari)
+router.post(
+  '/:id/ship',
+  [authRequired, requireRoles('admin'), [
+    check('shipyaariOrderId').optional().isString(),
+    check('awbNumber').optional().isString(),
+    check('courierPartner').optional().isString(),
+    check('trackingUrl').optional().isString(),
+    check('shipmentStatus').optional().isIn(['pending', 'processing', 'shipped', 'in_transit', 'delivered', 'failed']),
+    check('estimatedDeliveryDate').optional().isISO8601().toDate(),
+    check('actualDeliveryDate').optional().isISO8601().toDate(),
+    check('shipmentError').optional().isString()
+  ]],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    try {
+      const order = await Order.findById(req.params.id);
+      if (!order) return res.status(404).json({ message: 'Order not found' });
+
+      order.shipmentDetails = {
+        shipyaariOrderId: req.body.shipyaariOrderId,
+        awbNumber: req.body.awbNumber,
+        courierPartner: req.body.courierPartner,
+        trackingUrl: req.body.trackingUrl,
+        shipmentStatus: req.body.shipmentStatus || 'processing',
+        estimatedDeliveryDate: req.body.estimatedDeliveryDate,
+        actualDeliveryDate: req.body.actualDeliveryDate,
+        shipmentError: req.body.shipmentError
+      };
+
+      // If moving to shipped/in_transit, set shippedAt
+      if (['shipped', 'in_transit'].includes(order.shipmentDetails.shipmentStatus) && !order.shippedAt) {
+        order.shippedAt = new Date();
+      }
+
+      await order.save();
+      return res.json(order);
+    } catch (err) {
+      console.error('Set shipment details error:', err);
       return res.status(500).json({ message: 'Server Error' });
     }
   }

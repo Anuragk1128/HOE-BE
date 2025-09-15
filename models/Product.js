@@ -11,6 +11,16 @@ const ProductSchema = new Schema(
     images: [{ type: String }],
     price: { type: Number, required: true },
     compareAtPrice: { type: Number },
+    // Shipment-related fields (to align with Order item fields)
+    sku: { type: String, trim: true, index: true },
+    shippingCategory: { type: String, trim: true },
+    weightKg: { type: Number, min: 0, default: 1 },
+    dimensionsCm: {
+      length: { type: Number, min: 0, default: 10 },
+      breadth: { type: Number, min: 0, default: 10 },
+      height: { type: Number, min: 0, default: 10 },
+    },
+    hsnCode: { type: String, trim: true },
     attributes: {
       size: [{ type: String }],
       color: [{ type: String }],
@@ -33,5 +43,7 @@ const ProductSchema = new Schema(
 );
 
 ProductSchema.index({ brandId: 1, slug: 1 }, { unique: true });
+// Optional uniqueness can be enforced brand-wise if needed
+// ProductSchema.index({ brandId: 1, sku: 1 }, { unique: true, sparse: true });
 
 module.exports = model('Product', ProductSchema);

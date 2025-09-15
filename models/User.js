@@ -1,6 +1,25 @@
 const { Schema, model } = require('mongoose');
 const validator = require('validator');
 
+// Address subdocument schema aligning with OrderAddress
+const AddressSchema = new Schema(
+  {
+    fullName: { type: String, required: true, trim: true },
+    addressLine1: { type: String, required: true, trim: true },
+    addressLine2: { type: String, trim: true },
+    city: { type: String, required: true, trim: true },
+    state: { type: String, required: true, trim: true },
+    postalCode: { type: String, required: true, trim: true },
+    country: { type: String, required: true, trim: true, default: 'India' },
+    phone: { type: String, required: true, trim: true },
+    latitude: { type: String, trim: true },
+    longitude: { type: String, trim: true },
+    landmark: { type: String, trim: true },
+    isDefault: { type: Boolean, default: false },
+  },
+  { _id: true, timestamps: true }
+);
+
 const UserSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
@@ -16,7 +35,7 @@ const UserSchema = new Schema(
     role: { type: String, enum: ['customer', 'vendor', 'admin'], default: 'customer', index: true },
     isActive: { type: Boolean, default: true },
     phone: { type: String, trim: true },
-    address: { type: String, trim: true },
+    addresses: { type: [AddressSchema], default: [] },
     // Google OAuth fields
     googleId: { type: String, unique: true, sparse: true },
     authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
