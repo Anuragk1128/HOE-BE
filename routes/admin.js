@@ -216,7 +216,40 @@ router.delete('/brands/:brandId/categories/:categoryId/subcategories/:id', async
 router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryId/products', async (req, res, next) => {
   try {
     const { brandId, categoryId, subcategoryId } = req.params;
-    const { title, slug, description, images, price, compareAtPrice, attributes, stock, status, tags } = req.body;
+    const {
+      title,
+      slug,
+      description,
+      images,
+      price,
+      compareAtPrice,
+      // shipment & compliance
+      sku,
+      shippingCategory,
+      weightKg,
+      dimensionsCm,
+      hsnCode,
+      gstRate,
+      // classification & attributes
+      productType,
+      attributes,
+      // inventory & lifecycle
+      stock,
+      lowStockThreshold,
+      isActive,
+      status,
+      // associations & merchandising
+      vendorId,
+      tags,
+      featured,
+      bestseller,
+      newArrival,
+      onSale,
+      // SEO
+      metaTitle,
+      metaDescription,
+      metaKeywords
+    } = req.body;
     if (!title || price == null) return res.status(400).json({ message: 'Title and price are required' });
 
     const brand = await Brand.findById(brandId);
@@ -240,10 +273,32 @@ router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryI
       images,
       price,
       compareAtPrice,
+      // shipment & compliance
+      sku,
+      shippingCategory,
+      weightKg,
+      dimensionsCm,
+      hsnCode,
+      gstRate,
+      // classification & attributes
+      productType,
       attributes,
+      // inventory & lifecycle
       stock,
+      lowStockThreshold,
+      isActive,
       status,
+      // associations & merchandising
+      vendorId,
       tags,
+      featured,
+      bestseller,
+      newArrival,
+      onSale,
+      // SEO
+      metaTitle,
+      metaDescription,
+      metaKeywords,
     });
     res.status(201).json({ data: product });
   } catch (err) { next(err); }
@@ -266,7 +321,43 @@ router.patch('/brands/:brandId/categories/:categoryId/subcategories/:subcategory
     const existing = await Product.findOne({ _id: id, brandId, categoryId, subcategoryId });
     if (!existing) return res.status(404).json({ message: 'Product not found for this path' });
 
-    const allowed = ['title','slug','description','images','price','compareAtPrice','attributes','stock','status','vendorId','tags','categoryId','subcategoryId'];
+    const allowed = [
+      'title',
+      'slug',
+      'description',
+      'images',
+      'price',
+      'compareAtPrice',
+      // shipment & compliance
+      'sku',
+      'shippingCategory',
+      'weightKg',
+      'dimensionsCm',
+      'hsnCode',
+      'gstRate',
+      // classification & attributes
+      'productType',
+      'attributes',
+      // inventory & lifecycle
+      'stock',
+      'lowStockThreshold',
+      'isActive',
+      'status',
+      // associations & merchandising
+      'vendorId',
+      'tags',
+      'featured',
+      'bestseller',
+      'newArrival',
+      'onSale',
+      // SEO
+      'metaTitle',
+      'metaDescription',
+      'metaKeywords',
+      // relocation
+      'categoryId',
+      'subcategoryId'
+    ];
     const updates = {};
 
     for (const key of allowed) {
@@ -289,6 +380,13 @@ router.patch('/brands/:brandId/categories/:categoryId/subcategories/:subcategory
       if (key === 'attributes' && req.body.attributes && typeof req.body.attributes === 'object') {
         const currentAttrs = (existing.attributes && typeof existing.attributes === 'object') ? existing.attributes : {};
         updates.attributes = { ...currentAttrs, ...req.body.attributes };
+        continue;
+      }
+
+      // Merge for dimensions object
+      if (key === 'dimensionsCm' && req.body.dimensionsCm && typeof req.body.dimensionsCm === 'object') {
+        const currentDims = (existing.dimensionsCm && typeof existing.dimensionsCm === 'object') ? existing.dimensionsCm : {};
+        updates.dimensionsCm = { ...currentDims, ...req.body.dimensionsCm };
         continue;
       }
 

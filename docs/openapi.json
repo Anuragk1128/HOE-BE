@@ -1061,21 +1061,37 @@
                   "images": { "type": "array", "items": { "type": "string" } },
                   "price": { "type": "number" },
                   "compareAtPrice": { "type": "number" },
+                  "sku": { "type": "string" },
+                  "shippingCategory": { "type": "string", "enum": ["artificial-jewellery","earrings","necklaces","bracelets","bangles","rings","clothes","knitted-clothes","textiles","accessories","general"] },
+                  "weightKg": { "type": "number" },
+                  "dimensionsCm": { "type": "object", "properties": { "length": {"type":"number"}, "breadth": {"type":"number"}, "height": {"type":"number"} } },
+                  "hsnCode": { "type": "string" },
+                  "gstRate": { "type": "number", "minimum": 0, "maximum": 28 },
+                  "productType": { "type": "string", "enum": ["artificial-jewellery","imitation-jewellery","fashion-jewellery","clothing","accessories","textiles"] },
                   "attributes": { 
             "type": "object", 
             "properties": {
               "size": { "type": "array", "items": { "type": "string" } },
               "color": { "type": "array", "items": { "type": "string" } },
-              "material": { "type": "string" },
-              "fit": { "type": "string" },
+              "material": { "type": "string", "enum": ["base-metal","stainless-steel","brass","copper","plastic","resin","glass","wood","cotton","polyester","silk","mixed-material"] },
+              "fit": { "type": "string", "enum": ["regular","slim","loose","oversized","fitted"] },
               "styling": { "type": "string" }
             },
             "additionalProperties": true 
           },
                   "stock": { "type": "number" },
-                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
+                  "lowStockThreshold": { "type": "number" },
+                  "isActive": { "type": "boolean" },
+                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval", "out_of_stock", "discontinued"] },
                   "vendorId": { "type": "string" },
-                  "tags": { "type": "array", "items": { "type": "string" } }
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "featured": { "type": "boolean" },
+                  "bestseller": { "type": "boolean" },
+                  "newArrival": { "type": "boolean" },
+                  "onSale": { "type": "boolean" },
+                  "metaTitle": { "type": "string" },
+                  "metaDescription": { "type": "string" },
+                  "metaKeywords": { "type": "array", "items": { "type": "string" } }
                 }
               }
             }
@@ -1114,20 +1130,37 @@
                   "images": { "type": "array", "items": { "type": "string" } },
                   "price": { "type": "number" },
                   "compareAtPrice": { "type": "number" },
+                  "sku": { "type": "string" },
+                  "shippingCategory": { "type": "string", "enum": ["artificial-jewellery","earrings","necklaces","bracelets","bangles","rings","clothes","knitted-clothes","textiles","accessories","general"] },
+                  "weightKg": { "type": "number" },
+                  "dimensionsCm": { "type": "object", "properties": { "length": {"type":"number"}, "breadth": {"type":"number"}, "height": {"type":"number"} } },
+                  "hsnCode": { "type": "string" },
+                  "gstRate": { "type": "number", "minimum": 0, "maximum": 28 },
+                  "productType": { "type": "string", "enum": ["artificial-jewellery","imitation-jewellery","fashion-jewellery","clothing","accessories","textiles"] },
                   "attributes": { 
             "type": "object", 
             "properties": {
               "size": { "type": "array", "items": { "type": "string" } },
               "color": { "type": "array", "items": { "type": "string" } },
-              "material": { "type": "string" },
-              "fit": { "type": "string" },
+              "material": { "type": "string", "enum": ["base-metal","stainless-steel","brass","copper","plastic","resin","glass","wood","cotton","polyester","silk","mixed-material"] },
+              "fit": { "type": "string", "enum": ["regular","slim","loose","oversized","fitted"] },
               "styling": { "type": "string" }
             },
             "additionalProperties": true 
           },
                   "stock": { "type": "number" },
-                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
-                  "tags": { "type": "array", "items": { "type": "string" } }
+                  "lowStockThreshold": { "type": "number" },
+                  "isActive": { "type": "boolean" },
+                  "status": { "type": "string", "enum": ["active", "draft", "pending_approval", "out_of_stock", "discontinued"] },
+                  "vendorId": { "type": "string" },
+                  "tags": { "type": "array", "items": { "type": "string" } },
+                  "featured": { "type": "boolean" },
+                  "bestseller": { "type": "boolean" },
+                  "newArrival": { "type": "boolean" },
+                  "onSale": { "type": "boolean" },
+                  "metaTitle": { "type": "string" },
+                  "metaDescription": { "type": "string" },
+                  "metaKeywords": { "type": "array", "items": { "type": "string" } }
                 }
               }
             }
@@ -1967,7 +2000,23 @@
           "price": { "type": "number" },
           "compareAtPrice": { "type": "number" },
           "sku": { "type": "string", "description": "Stock keeping unit" },
-          "shippingCategory": { "type": "string", "description": "Category for shipping rules" },
+          "shippingCategory": { 
+            "type": "string", 
+            "description": "Category for shipping rules",
+            "enum": [
+              "artificial-jewellery",
+              "earrings",
+              "necklaces",
+              "bracelets",
+              "bangles",
+              "rings",
+              "clothes",
+              "knitted-clothes",
+              "textiles",
+              "accessories",
+              "general"
+            ]
+          },
           "weightKg": { "type": "number", "description": "Weight in kilograms" },
           "dimensionsCm": {
             "type": "object",
@@ -1978,24 +2027,50 @@
             }
           },
           "hsnCode": { "type": "string", "description": "HSN code for taxation" },
+          "gstRate": { "type": "number", "minimum": 0, "maximum": 28 },
+          "productType": {
+            "type": "string",
+            "enum": [
+              "artificial-jewellery",
+              "imitation-jewellery",
+              "fashion-jewellery",
+              "clothing",
+              "accessories",
+              "textiles"
+            ]
+          },
           "attributes": { 
             "type": "object", 
             "properties": {
               "size": { "type": "array", "items": { "type": "string" } },
               "color": { "type": "array", "items": { "type": "string" } },
-              "material": { "type": "string" },
-              "fit": { "type": "string" },
+              "material": { "type": "string", "enum": ["base-metal","stainless-steel","brass","copper","plastic","resin","glass","wood","cotton","polyester","silk","mixed-material"] },
+              "fit": { "type": "string", "enum": ["regular","slim","loose","oversized","fitted"] },
               "styling": { "type": "string" }
             },
             "additionalProperties": true 
           },
           "stock": { "type": "number" },
-          "status": { "type": "string", "enum": ["active", "draft", "pending_approval"] },
+          "lowStockThreshold": { "type": "number" },
+          "isActive": { "type": "boolean" },
+          "status": { "type": "string", "enum": ["active", "draft", "pending_approval", "out_of_stock", "discontinued"] },
           "vendorId": { "$ref": "#/components/schemas/PopulatedVendor" },
           "tags": { "type": "array", "items": { "type": "string" } },
           "featured": { "type": "boolean", "default": false },
           "bestseller": { "type": "boolean", "default": false },
           "newArrival": { "type": "boolean", "default": false },
+          "onSale": { "type": "boolean", "default": false },
+          "rating": { "type": "number", "minimum": 0, "maximum": 5 },
+          "numReviews": { "type": "number" },
+          "totalSales": { "type": "number" },
+          "viewCount": { "type": "number" },
+          "metaTitle": { "type": "string" },
+          "metaDescription": { "type": "string" },
+          "metaKeywords": { "type": "array", "items": { "type": "string" } },
+          "taxAmount": { "type": "number", "description": "Computed: price * gstRate / 100" },
+          "priceIncludingTax": { "type": "number" },
+          "inStock": { "type": "boolean" },
+          "isLowStock": { "type": "boolean" },
           "createdAt": { "type": "string" },
           "updatedAt": { "type": "string" }
         }

@@ -91,13 +91,13 @@ router.post(
         status: 'pending',
         sellerDetails: {
           address: {
-            fullAddress: process.env.SELLER_ADDRESS || '123 Business Street, Mumbai',
-            pincode: parseInt(process.env.SELLER_PINCODE) || 400001,
-            city: process.env.SELLER_CITY || 'Mumbai',
-            state: process.env.SELLER_STATE || 'Maharashtra',
+            fullAddress: process.env.SELLER_ADDRESS ,
+            pincode: parseInt(process.env.SELLER_PINCODE),
+            city: process.env.SELLER_CITY ,
+            state: process.env.SELLER_STATE ,
             country: 'India',
-            latitude: process.env.SELLER_LATITUDE || '19.0760',
-            longitude: process.env.SELLER_LONGITUDE || '72.8777',
+            latitude: process.env.SELLER_LATITUDE ,
+            longitude: process.env.SELLER_LONGITUDE,
           },
           contact: {
             name: process.env.SELLER_CONTACT_NAME || 'Store Manager',
