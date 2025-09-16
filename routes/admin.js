@@ -239,7 +239,6 @@ router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryI
       isActive,
       status,
       // associations & merchandising
-      vendorId,
       tags,
       featured,
       bestseller,
@@ -289,7 +288,6 @@ router.post('/brands/:brandId/categories/:categoryId/subcategories/:subcategoryI
       isActive,
       status,
       // associations & merchandising
-      vendorId,
       tags,
       featured,
       bestseller,
