@@ -372,6 +372,168 @@
         }
       }
     },
+    "/api/health/geocoding": {
+      "get": {
+        "summary": "Geocoding health check",
+        "description": "Checks Mapbox token configuration and returns a timestamp.",
+        "tags": ["Geocoding"],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "service": { "type": "string", "example": "Mapbox Geocoding" },
+                    "token_configured": { "type": "boolean", "example": true },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/geocoding/validate-address": {
+      "post": {
+        "summary": "Validate and geocode an address",
+        "description": "Validates address fields and returns latitude/longitude using Mapbox forward geocoding.",
+        "tags": ["Geocoding"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["addressLine1", "city", "state", "postalCode"],
+                "properties": {
+                  "addressLine1": { "type": "string", "example": "Gateway of India" },
+                  "addressLine2": { "type": "string", "example": "Apollo Bandar, Colaba" },
+                  "city": { "type": "string", "example": "Mumbai" },
+                  "state": { "type": "string", "example": "Maharashtra" },
+                  "postalCode": { "type": "string", "example": "400001" },
+                  "country": { "type": "string", "example": "India" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Geocoding success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "latitude": { "type": "string", "example": "18.921984" },
+                        "longitude": { "type": "string", "example": "72.834654" },
+                        "full_address": { "type": "string" },
+                        "place_formatted": { "type": "string" },
+                        "isValid": { "type": "boolean", "example": true },
+                        "original_input": { "$ref": "#/components/schemas/GeocodeAddressInput" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation failed or address not geocodable" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/geocoding/reverse": {
+      "post": {
+        "summary": "Reverse geocode coordinates",
+        "description": "Returns an address for given latitude and longitude.",
+        "tags": ["Geocoding"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["latitude", "longitude"],
+                "properties": {
+                  "latitude": { "type": "string", "example": "18.921984" },
+                  "longitude": { "type": "string", "example": "72.834654" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reverse geocoding success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "full_address": { "type": "string" },
+                        "place_formatted": { "type": "string" },
+                        "coordinates": { "type": "array", "items": { "type": "string" }, "example": ["72.834654", "18.921984"] }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing/invalid coordinates" },
+          "404": { "description": "No address found" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/geocoding/test": {
+      "get": {
+        "summary": "Test geocoding service",
+        "description": "Performs a sample forward geocoding request to verify setup.",
+        "tags": ["Geocoding"],
+        "responses": {
+          "200": {
+            "description": "Test result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "test_address": { "$ref": "#/components/schemas/GeocodeAddressInput" },
+                    "result": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "latitude": { "type": "string" },
+                        "longitude": { "type": "string" },
+                        "full_address": { "type": "string" },
+                        "place_formatted": { "type": "string" }
+                      }
+                    },
+                    "token_configured": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/admin/login": {
       "post": {
         "summary": "Admin login (token only)",
@@ -1984,6 +2146,18 @@
         "properties": {
           "success": { "type": "boolean", "example": false },
           "message": { "type": "string", "description": "Error message" }
+        }
+      },
+      "GeocodeAddressInput": {
+        "type": "object",
+        "required": ["addressLine1", "city", "state", "postalCode"],
+        "properties": {
+          "addressLine1": { "type": "string", "description": "Primary street address" },
+          "addressLine2": { "type": "string", "description": "Additional address info", "nullable": true },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "postalCode": { "type": "string" },
+          "country": { "type": "string", "default": "India" }
         }
       },
       "Product": {

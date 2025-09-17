@@ -4,7 +4,7 @@ const router = express.Router();
 const geocodingService = require('../services/geocodingService');
 
 // Validate and geocode a single address
-router.post('/api/geocoding/validate-address', async (req, res) => {
+router.post('/validate-address', async (req, res) => {
   try {
     const addressData = req.body;
     
@@ -48,7 +48,7 @@ router.post('/api/geocoding/validate-address', async (req, res) => {
 });
 
 // Reverse geocode coordinates to address
-router.post('/api/geocoding/reverse', async (req, res) => {
+router.post('/reverse', async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
     
@@ -89,7 +89,7 @@ router.post('/api/geocoding/reverse', async (req, res) => {
 });
 
 // Test geocoding service
-router.get('/api/geocoding/test', async (req, res) => {
+router.get('/test', async (req, res) => {
   try {
     const testAddress = {
       addressLine1: 'Gateway of India',
