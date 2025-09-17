@@ -84,7 +84,7 @@ app.use('/api/addresses', addressesRoutes);
 app.use('/api/users', usersRoutes);
 
 // Geocoding routes (mounted without a base since paths include /api/geocoding/...)
-app.use(geocodingRoutes);
+app.use("/api/geocoding", geocodingRoutes);
 
 // Geocoding health check
 app.get('/api/health/geocoding', (req, res) => {
