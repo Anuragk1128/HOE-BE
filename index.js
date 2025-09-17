@@ -22,6 +22,7 @@ const ordersRoutes = require('./routes/orders');
 const webHookRoutes = require('./routes/webHook');
 const addressesRoutes = require('./routes/addresses');
 const usersRoutes = require('./routes/users');
+const geocodingRoutes = require('./routes/geocoding');
 
 const app = express();
 
@@ -81,6 +82,19 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/webhook', webHookRoutes);
 app.use('/api/addresses', addressesRoutes);
 app.use('/api/users', usersRoutes);
+
+// Geocoding routes (mounted without a base since paths include /api/geocoding/...)
+app.use(geocodingRoutes);
+
+// Geocoding health check
+app.get('/api/health/geocoding', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Mapbox Geocoding',
+    token_configured: !!process.env.MAPBOX_ACCESS_TOKEN,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // 404 handler for unknown API routes (Express 5 safe catch-all)
 app.use('/api', (req, res) => res.status(404).json({ message: 'Route not found' }));

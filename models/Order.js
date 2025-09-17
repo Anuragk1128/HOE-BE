@@ -1,5 +1,8 @@
 const { Schema, model, Types } = require('mongoose');
 
+// Geocoding service for fetching latitude/longitude
+const geocodingService = require('../services/geocodingService');
+
 // Order Item Schema - Enhanced for Shipyaari
 const OrderItemSchema = new Schema(
   {
@@ -38,7 +41,11 @@ const AddressSchema = new Schema(
     // Additional fields for location services
     latitude: { type: String },
     longitude: { type: String },
-    landmark: { type: String }
+    landmark: { type: String },
+    // Geocoding metadata
+    geocodingAttempted: { type: Boolean, default: false },
+    geocodingStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+    geocodingError: { type: String }
   },
   { _id: false }
 );
@@ -132,7 +139,9 @@ const SellerDetailsSchema = new Schema(
       state: { type: String, required: true },
       country: { type: String, default: 'India' },
       latitude: { type: String },
-      longitude: { type: String }
+      longitude: { type: String },
+      geocodingAttempted: { type: Boolean, default: false },
+      geocodingStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' }
     },
     contact: {
       name: { type: String, required: true },
@@ -247,6 +256,64 @@ const OrderSchema = new Schema(
   },
   { timestamps: true }
 );
+
+// Pre-save middleware for geocoding addresses
+OrderSchema.pre('save', async function(next) {
+  try {
+    // Geocode shipping address
+    if (this.isModified('shippingAddress') && this.shippingAddress && !this.shippingAddress.geocodingAttempted) {
+      const shippingCoords = await geocodingService.getCoordinatesFromAddress(this.shippingAddress);
+      if (shippingCoords) {
+        this.shippingAddress.latitude = shippingCoords.latitude;
+        this.shippingAddress.longitude = shippingCoords.longitude;
+        this.shippingAddress.geocodingStatus = 'success';
+      } else {
+        this.shippingAddress.geocodingStatus = 'failed';
+        this.shippingAddress.geocodingError = 'Unable to geocode shipping address';
+      }
+      this.shippingAddress.geocodingAttempted = true;
+    }
+
+    // Geocode billing address if exists
+    if (this.billingAddress && this.isModified('billingAddress') && !this.billingAddress.geocodingAttempted) {
+      const billingCoords = await geocodingService.getCoordinatesFromAddress(this.billingAddress);
+      if (billingCoords) {
+        this.billingAddress.latitude = billingCoords.latitude;
+        this.billingAddress.longitude = billingCoords.longitude;
+        this.billingAddress.geocodingStatus = 'success';
+      } else {
+        this.billingAddress.geocodingStatus = 'failed';
+        this.billingAddress.geocodingError = 'Unable to geocode billing address';
+      }
+      this.billingAddress.geocodingAttempted = true;
+    }
+
+    // Geocode seller address
+    if (this.sellerDetails && this.isModified('sellerDetails.address') && !this.sellerDetails.address.geocodingAttempted) {
+      const sellerCoords = await geocodingService.getCoordinatesFromAddress({
+        addressLine1: this.sellerDetails.address.fullAddress,
+        city: this.sellerDetails.address.city,
+        state: this.sellerDetails.address.state,
+        postalCode: this.sellerDetails.address.pincode?.toString(),
+        country: this.sellerDetails.address.country
+      });
+
+      if (sellerCoords) {
+        this.sellerDetails.address.latitude = sellerCoords.latitude;
+        this.sellerDetails.address.longitude = sellerCoords.longitude;
+        this.sellerDetails.address.geocodingStatus = 'success';
+      } else {
+        this.sellerDetails.address.geocodingStatus = 'failed';
+      }
+      this.sellerDetails.address.geocodingAttempted = true;
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error in order geocoding middleware:', error);
+    next(); // Continue saving even if geocoding fails
+  }
+});
 
 // Pre-save middleware to generate order IDs
 OrderSchema.pre('save', async function(next) {
