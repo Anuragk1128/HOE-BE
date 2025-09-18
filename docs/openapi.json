@@ -1417,6 +1417,96 @@
         }
       }
     },
+    "/api/admin/products/bulk-upload": {
+      "post": {
+        "summary": "Bulk upload products from Excel/CSV (admin)",
+        "description": "Upload products in bulk using an Excel (.xlsx, .xls) or CSV file. The first row should contain column headers. See schema for supported fields.",
+        "tags": ["Admin", "Products"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["productFile"],
+                "properties": {
+                  "productFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Excel (.xlsx, .xls) or CSV file with product data"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk upload results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "filename": { "type": "string" },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "integer", "description": "Total rows processed" },
+                        "successful": { "type": "integer", "description": "Number of products successfully created" },
+                        "failed": { "type": "integer", "description": "Number of rows that failed" }
+                      }
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": { "type": "integer" },
+                          "success": { "type": "boolean" },
+                          "productId": { "type": "string" },
+                          "title": { "type": "string" },
+                          "brand": { "type": "string" },
+                          "category": { "type": "string" },
+                          "subcategory": { "type": "string" }
+                        }
+                      }
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": { "type": "integer" },
+                          "error": { "type": "string" },
+                          "productData": { "type": "string" },
+                          "brandSlug": { "type": "string" },
+                          "categorySlug": { "type": "string" },
+                          "subcategorySlug": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., invalid file, missing required fields)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "500": { "$ref": "#/components/responses/ServerError" }
+        }
+      }
+    },
     "/api/admin/vendors": {
       "get": {
         "summary": "List all vendors (admin) - simple version",
