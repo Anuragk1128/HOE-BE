@@ -702,6 +702,16 @@ router.post('/products/bulk-upload', upload.single('productFile'), async (req, r
 
     // Note: We resolve brand/category/subcategory per row to ensure hierarchy integrity
 
+    // Helper: normalize various cell values
+    const toBool = (v) => {
+      if (v === undefined || v === null) return undefined;
+      if (typeof v === 'boolean') return v;
+      const s = String(v).trim().toLowerCase();
+      if (s === 'true') return true;
+      if (s === 'false') return false;
+      return undefined;
+    };
+
     // Process each product with ALL schema fields
     for (let i = 0; i < rawProducts.length; i++) {
       const productData = rawProducts[i];
@@ -771,13 +781,13 @@ router.post('/products/bulk-upload', upload.single('productFile'), async (req, r
           transformedProduct.compareAtPrice = Number(productData.compareAtPrice);
         }
 
-        // SHIPPING & LOGISTICS FIELDS (from your schema)
-        if (productData.sku && productData.sku.trim()) {
-          transformedProduct.sku = productData.sku.trim();
+        // SHIPPING & LOGISTICS FIELDS - UPDATED
+        if (productData.sku) {
+          transformedProduct.sku = String(productData.sku).trim();
         }
 
-        if (productData.shippingCategory && productData.shippingCategory.trim()) {
-          transformedProduct.shippingCategory = productData.shippingCategory.trim();
+        if (productData.shippingCategory) {
+          transformedProduct.shippingCategory = String(productData.shippingCategory).trim();
         }
 
         if (productData.weightKg && !isNaN(parseFloat(productData.weightKg))) {
@@ -802,34 +812,34 @@ router.post('/products/bulk-upload', upload.single('productFile'), async (req, r
         }
 
         // TAX & COMPLIANCE FIELDS (from your schema)
-        if (productData.hsnCode && productData.hsnCode.trim()) {
-          transformedProduct.hsnCode = productData.hsnCode.trim();
+        if (productData.hsnCode) {
+          transformedProduct.hsnCode = String(productData.hsnCode).trim();
         }
 
         if (productData.gstRate && !isNaN(parseFloat(productData.gstRate))) {
           transformedProduct.gstRate = Number(productData.gstRate);
         }
 
-        if (productData.productType && productData.productType.trim()) {
-          transformedProduct.productType = productData.productType.trim();
+        if (productData.productType) {
+          transformedProduct.productType = String(productData.productType).trim();
         }
 
-        // ATTRIBUTES OBJECT (from your schema)
+        // ATTRIBUTES OBJECT - UPDATED
         const attributes = {};
-        if (productData.size && productData.size.trim()) {
-          attributes.size = productData.size.split(',').map(s => s.trim()).filter(s => s.length > 0);
+        if (productData.size) {
+          attributes.size = String(productData.size).split(',').map(s => s.trim()).filter(s => s.length > 0);
         }
-        if (productData.color && productData.color.trim()) {
-          attributes.color = productData.color.split(',').map(c => c.trim()).filter(c => c.length > 0);
+        if (productData.color) {
+          attributes.color = String(productData.color).split(',').map(c => c.trim()).filter(c => c.length > 0);
         }
-        if (productData.material && productData.material.trim()) {
-          attributes.material = productData.material.trim();
+        if (productData.material) {
+          attributes.material = String(productData.material).trim();
         }
-        if (productData.fit && productData.fit.trim()) {
-          attributes.fit = productData.fit.trim();
+        if (productData.fit) {
+          attributes.fit = String(productData.fit).trim();
         }
-        if (productData.styling && productData.styling.trim()) {
-          attributes.styling = productData.styling.trim();
+        if (productData.styling) {
+          attributes.styling = String(productData.styling).trim();
         }
         // Add any additional attributes from the file
         Object.keys(productData).forEach(key => {
@@ -851,39 +861,36 @@ router.post('/products/bulk-upload', upload.single('productFile'), async (req, r
           transformedProduct.lowStockThreshold = parseInt(productData.lowStockThreshold);
         }
 
-        // STATUS & BOOLEAN FIELDS
+        // STATUS & BOOLEAN FIELDS - UPDATED
         if (productData.isActive !== undefined && productData.isActive !== '') {
-          transformedProduct.isActive = productData.isActive === 'true' || productData.isActive === true;
+          const b = toBool(productData.isActive);
+          if (typeof b === 'boolean') transformedProduct.isActive = b;
         }
 
-        if (productData.status && productData.status.trim()) {
-          transformedProduct.status = productData.status.trim();
+        if (productData.status) {
+          transformedProduct.status = String(productData.status).trim();
         }
 
-        // VENDOR & BUSINESS FIELDS
-        if (productData.vendorId && productData.vendorId.trim()) {
-          transformedProduct.vendorId = productData.vendorId.trim();
+        // VENDOR & BUSINESS FIELDS - UPDATED
+        if (productData.vendorId) {
+          transformedProduct.vendorId = String(productData.vendorId).trim();
         }
 
-        if (productData.tags && productData.tags.trim()) {
-          transformedProduct.tags = productData.tags.split(',')
+        if (productData.tags) {
+          transformedProduct.tags = String(productData.tags).split(',')
             .map(tag => tag.trim())
             .filter(tag => tag.length > 0);
         }
 
-        // MARKETING FLAGS
-        if (productData.featured === 'true' || productData.featured === true) {
-          transformedProduct.featured = true;
-        }
-        if (productData.bestseller === 'true' || productData.bestseller === true) {
-          transformedProduct.bestseller = true;
-        }
-        if (productData.newArrival === 'true' || productData.newArrival === true) {
-          transformedProduct.newArrival = true;
-        }
-        if (productData.onSale === 'true' || productData.onSale === true) {
-          transformedProduct.onSale = true;
-        }
+        // MARKETING FLAGS (case-insensitive TRUE/FALSE)
+        const featuredBool = toBool(productData.featured);
+        if (typeof featuredBool === 'boolean') transformedProduct.featured = featuredBool;
+        const bestsellerBool = toBool(productData.bestseller);
+        if (typeof bestsellerBool === 'boolean') transformedProduct.bestseller = bestsellerBool;
+        const newArrivalBool = toBool(productData.newArrival);
+        if (typeof newArrivalBool === 'boolean') transformedProduct.newArrival = newArrivalBool;
+        const onSaleBool = toBool(productData.onSale);
+        if (typeof onSaleBool === 'boolean') transformedProduct.onSale = onSaleBool;
 
         // RATING & SALES FIELDS (if provided)
         if (productData.rating && !isNaN(parseFloat(productData.rating))) {
@@ -899,15 +906,15 @@ router.post('/products/bulk-upload', upload.single('productFile'), async (req, r
           transformedProduct.viewCount = parseInt(productData.viewCount);
         }
 
-        // SEO META FIELDS
-        if (productData.metaTitle && productData.metaTitle.trim()) {
-          transformedProduct.metaTitle = productData.metaTitle.trim();
+        // SEO META FIELDS - UPDATED
+        if (productData.metaTitle) {
+          transformedProduct.metaTitle = String(productData.metaTitle).trim();
         }
-        if (productData.metaDescription && productData.metaDescription.trim()) {
-          transformedProduct.metaDescription = productData.metaDescription.trim();
+        if (productData.metaDescription) {
+          transformedProduct.metaDescription = String(productData.metaDescription).trim();
         }
-        if (productData.metaKeywords && productData.metaKeywords.trim()) {
-          transformedProduct.metaKeywords = productData.metaKeywords.split(',')
+        if (productData.metaKeywords) {
+          transformedProduct.metaKeywords = String(productData.metaKeywords).split(',')
             .map(keyword => keyword.trim())
             .filter(keyword => keyword.length > 0);
         }

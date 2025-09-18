@@ -1420,7 +1420,7 @@
     "/api/admin/products/bulk-upload": {
       "post": {
         "summary": "Bulk upload products from Excel/CSV (admin)",
-        "description": "Upload products in bulk using an Excel (.xlsx, .xls) or CSV file. The first row should contain column headers. See schema for supported fields.",
+        "description": "Upload products in bulk using an Excel (.xlsx, .xls) or CSV file. The first row must contain column headers. Column conventions: images, size, color, metaKeywords, and tags accept comma-separated values (e.g., 'https://a.jpg, https://b.jpg'); booleans (featured, bestseller, newArrival, onSale, isActive) accept case-insensitive true/false (TRUE/FALSE/true/false); numeric fields (price, compareAtPrice, weightKg, gstRate, stock, lowStockThreshold, dimensionsLength, dimensionsBreadth, dimensionsHeight) are parsed as numbers; strings are trimmed. Required columns: brandSlug, categorySlug, subcategorySlug, title, price. Optional columns include: description, images, slug, sku, stock, shippingCategory, weightKg, dimensionsLength, dimensionsBreadth, dimensionsHeight, hsnCode, gstRate, productType, size, color, material, fit, styling, tags, featured, bestseller, newArrival, onSale, isActive, status, metaTitle, metaDescription, metaKeywords, vendorId.",
         "tags": ["Admin", "Products"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
