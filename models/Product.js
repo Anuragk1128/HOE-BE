@@ -70,7 +70,7 @@ const ProductSchema = new Schema(
         'textiles'
       ],
       required: true,
-      default: 'artificial-jewellery'
+  
     },
     
     attributes: {
@@ -105,7 +105,6 @@ const ProductSchema = new Schema(
       gender: {
         type: String,
         enum: ['women', 'men', 'unisex', 'kids'],
-        default: 'women'
       }
     },
     
