@@ -110,6 +110,7 @@ const ProductSchema = new Schema(
     
     // Inventory Management
     stock: { type: Number, default: 0 },
+    reservedStock: { type: Number, default: 0 },
     lowStockThreshold: { type: Number, default: 5 },
     isActive: { type: Boolean, default: true },
     status: { 
@@ -117,6 +118,7 @@ const ProductSchema = new Schema(
       enum: ['active', 'draft', 'pending_approval', 'out_of_stock', 'discontinued'], 
       default: 'active' 
     },
+    lastStockUpdate: { type: Date, default: Date.now },
     
     // Business fields
     vendorId: { type: Types.ObjectId, ref: 'Vendor' },
@@ -227,6 +229,11 @@ ProductSchema.pre('save', function(next) {
     this.status = 'out_of_stock';
   } else if (this.stock > 0 && this.status === 'out_of_stock') {
     this.status = 'active';
+  }
+  
+  // Track last stock update timestamp when stock changes
+  if (this.isModified('stock')) {
+    this.lastStockUpdate = new Date();
   }
   
   next();

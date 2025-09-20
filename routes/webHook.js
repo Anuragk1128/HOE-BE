@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
 const shipyaariService = require('../services/shipyariServices');
 
 // Razorpay webhook handler
@@ -91,6 +92,42 @@ async function handlePaymentSuccess(paymentData) {
     );
 
     console.log(`✅ Payment completed for order: ${order.orderId} - ₹${paymentData.amount / 100}`);
+
+    // Automatic stock deduction for purchased items
+    console.log('📦 Deducting stock for purchased items...');
+    for (const item of updatedOrder.items) {
+      try {
+        // Prevent stock from going negative using conditional update
+        const stockUpdate = await Product.findOneAndUpdate(
+          { _id: item.product, stock: { $gte: item.quantity } },
+          {
+            $inc: {
+              stock: -item.quantity,
+              totalSales: item.quantity
+            },
+            $set: {
+              lastStockUpdate: new Date()
+            }
+          },
+          { new: true }
+        );
+
+        if (!stockUpdate) {
+          console.error(`❌ Failed to update stock for product: ${item.product} (insufficient stock?)`);
+          continue;
+        }
+
+        console.log(`✅ Stock updated: ${item.title} - Reduced by ${item.quantity}, Remaining: ${stockUpdate.stock}`);
+
+        // Auto-update product status if out of stock
+        if (stockUpdate.stock === 0 && stockUpdate.status !== 'out_of_stock') {
+          await Product.findByIdAndUpdate(item.product, { status: 'out_of_stock', lastStockUpdate: new Date() });
+          console.log(`⚠️ Product ${item.title} is now OUT OF STOCK`);
+        }
+      } catch (e) {
+        console.error(`❌ Error updating stock for product ${item.product}:`, e.message);
+      }
+    }
 
     // Automatically create Shipyaari shipment
     await processShipment(updatedOrder);
