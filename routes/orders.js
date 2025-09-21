@@ -67,6 +67,7 @@ router.post(
               ? { length: prod.dimensionsCm.length, breadth: prod.dimensionsCm.breadth, height: prod.dimensionsCm.height }
               : { length: 10, breadth: 10, height: 10 }),
           hsnCode: i.hsnCode || prod.hsnCode || '1234',
+          gstRate: prod.gstRate || 12, // Add GST rate for Shipyaari
         });
       }
 
@@ -399,6 +400,7 @@ router.post(
           weight: typeof i.weight !== 'undefined' ? i.weight : (typeof prod.weightKg === 'number' ? prod.weightKg : undefined),
           dimensions: i.dimensions || (prod.dimensionsCm ? { length: prod.dimensionsCm.length, breadth: prod.dimensionsCm.breadth, height: prod.dimensionsCm.height } : undefined),
           hsnCode: i.hsnCode || prod.hsnCode,
+          gstRate: prod.gstRate || 12, // Add GST rate for Shipyaari
         });
       }
 

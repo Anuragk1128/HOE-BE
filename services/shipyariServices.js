@@ -61,12 +61,18 @@ class ShipyaariService {
 
       if (response.data.success) {
         console.log('✅ Shipyaari order created successfully:', response.data.data);
+        
+        // Parse the actual response structure from Shipyaari API
+        const orderData = response.data.data[0]; // API returns array with first element
+        
         return {
-          shipyaariOrderId: response.data.data.orderId || response.data.data.id,
-          awbNumber: response.data.data.awbNumber,
-          courierPartner: response.data.data.courierPartner || response.data.data.courier,
-          trackingUrl: response.data.data.trackingUrl,
-          estimatedDeliveryDate: response.data.data.expectedDeliveryDate || response.data.data.estimatedDelivery
+          shipyaariOrderId: orderData.orderId,
+          awbNumber: orderData.awbs?.[0]?.tracking?.awb,
+          courierPartner: orderData.awbs?.[0]?.charges?.partnerName,
+          trackingUrl: orderData.awbs?.[0]?.tracking?.label,
+          estimatedDeliveryDate: orderData.awbs?.[0]?.pickupDate,
+          zone: orderData.zone,
+          charges: orderData.awbs?.[0]?.charges
         };
       } else {
         throw new Error(`Shipyaari API error: ${response.data.message || 'Unknown error'}`);
@@ -233,16 +239,16 @@ class ShipyaariService {
     return {
       pickupDetails: {
         addressType: "warehouse",
-        fullAddress: process.env.SELLER_ADDRESS,
-        pincode: parseInt(process.env.SELLER_PINCODE),
+        fullAddress: process.env.SELLER_ADDRESS || "201 Goregaon West, Mumbai, Maharashtra 400062",
+        pincode: parseInt(process.env.SELLER_PINCODE) || 400062,
         startTime: process.env.PICKUP_START_TIME || "09",
         endTime: process.env.PICKUP_END_TIME || "18",
-        latitude: process.env.SELLER_LATITUDE,
-        longitude: process.env.SELLER_LONGITUDE,
+        latitude: process.env.SELLER_LATITUDE || "19.0697",
+        longitude: process.env.SELLER_LONGITUDE || "72.8856",
         contact: {
-          name: process.env.SELLER_CONTACT_NAME,
-          mobileNo: parseInt(process.env.SELLER_MOBILE),
-          alternateMobileNo: parseInt(process.env.SELLER_ALTERNATE_MOBILE || process.env.SELLER_MOBILE)
+          name: process.env.SELLER_CONTACT_NAME || "Store Manager",
+          mobileNo: parseInt(process.env.SELLER_MOBILE) || 9876543210,
+          alternateMobileNo: parseInt(process.env.SELLER_ALTERNATE_MOBILE || process.env.SELLER_MOBILE) || 9876543210
         }
       },
       deliveryDetails: {
@@ -251,13 +257,14 @@ class ShipyaariService {
         pincode: parseInt(order.shippingAddress.postalCode),
         startTime: "10",
         endTime: "20",
-        latitude: order.shippingAddress.latitude || "28.6107",
-        longitude: order.shippingAddress.longitude || "77.4250",
+        latitude: order.shippingAddress.latitude ? parseFloat(order.shippingAddress.latitude) : null,
+        longitude: order.shippingAddress.longitude ? parseFloat(order.shippingAddress.longitude) : null,
         contact: {
           name: order.shippingAddress.fullName,
           mobileNo: parseInt(order.shippingAddress.phone),
           alternateMobileNo: parseInt(order.shippingAddress.phone)
-        }
+        },
+        gstNumber: process.env.BUSINESS_GST_NUMBER || "09HRTPS8794G1ZD" // Your business GST number
       },
       boxInfo: order.items.map((item, index) => ({
         name: `box_${index + 1}`,
@@ -268,6 +275,7 @@ class ShipyaariService {
         breadth: item.dimensions?.breadth || 10,
         height: item.dimensions?.height || 10,
         qty: item.quantity,
+        discount: 0,
         measureUnit: "cm",
         products: [{
           name: item.title,
@@ -276,7 +284,10 @@ class ShipyaariService {
           hsnCode: item.hsnCode || "1234",
           qty: item.quantity,
           unitPrice: item.price,
+          discount: 0,
+          unitTax: Math.round((item.price * (item.gstRate || 12)) / 100),
           sellingPrice: item.price,
+          totalDiscount: 0,
           totalPrice: item.price * item.quantity,
           weightUnit: "kg",
           deadWeight: item.weight || 1,
@@ -298,11 +309,25 @@ class ShipyaariService {
       })),
       orderType: "B2C",
       transit: "FORWARD",
-      serviceMode: "SURFACE",
+      courierPartner: "",
+      courierPartnerServices: "",
+      serviceMode: "AIR",
+      giftCharges: 0,
+      shippingCharges: 0,
+      transactionCharges: 0,
+      advanceAmountPaid: 0,
       servicePriority: "cheapest",
+      source: "",
       qcType: "DoorStep",
+      returnReason: "",
+      orderFutureDate: "",
       pickupDate: new Date().getTime().toString(),
+      gstNumber: process.env.BUSINESS_GST_NUMBER || "09HRTPS8794G1ZD",
+      childGstNumber: process.env.BUSINESS_GST_NUMBER || "09HRTPS8794G1ZD",
+      parentId: 1,
+      childId: 2,
       orderId: order.orderId,
+      eWayBillNo: "",
       brandName: process.env.BRAND_NAME || "Your Store",
       brandLogo: process.env.BRAND_LOGO || ""
     };
