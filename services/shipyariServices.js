@@ -2,7 +2,7 @@ const axios = require('axios');
 
 class ShipyaariService {
   constructor() {
-    this.baseURL = process.env.SHIPYAARI_BASE_URL;
+    this.baseURL = process.env.SHIPYAARI_BASE_URL || 'https://api-seller.shipyaari.com/api/v1';
     this.credentials = {
       email: process.env.SHIPYAARI_EMAIL,
       password: process.env.SHIPYAARI_PASSWORD
@@ -11,7 +11,7 @@ class ShipyaariService {
     this.tokenExpiry = null;
   }
 
-  // 1. AUTHENTICATION (Existing - Enhanced)
+  // 1. AUTHENTICATION (Fixed - Correct token extraction and header format)
   async authenticate() {
     if (this.token && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return this.token;
@@ -19,16 +19,19 @@ class ShipyaariService {
 
     try {
       console.log('🔐 Authenticating with Shipyaari...');
+      console.log('📋 Using credentials:', { email: this.credentials.email, password: '***' });
       
       const response = await axios.post(`${this.baseURL}/seller/signIn`, this.credentials, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 30000
       });
       
+      console.log('📋 Authentication response:', JSON.stringify(response.data, null, 2));
+      
       if (response.data.success) {
-        this.token = response.data.data.token;
+        this.token = response.data.data[0].token; // ✅ FIXED: data is an array
         this.tokenExpiry = Date.now() + (23 * 60 * 60 * 1000); // 23 hours
-        console.log('✅ Shipyaari authentication successful');
+        console.log('✅ Shipyaari authentication successful, token received');
         return this.token;
       } else {
         throw new Error(`Authentication failed: ${response.data.message}`);
@@ -53,7 +56,7 @@ class ShipyaariService {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': token
           },
           timeout: 45000 // 45 second timeout for order creation
         }
@@ -97,7 +100,7 @@ class ShipyaariService {
         `${this.baseURL}/tracking/getTracking?trackingNo=${awbNumber}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': token,
             'accept': 'application/json'
           },
           timeout: 30000
@@ -160,7 +163,7 @@ class ShipyaariService {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': token
           },
           timeout: 60000 // Labels can take longer to generate
         }
@@ -199,7 +202,7 @@ class ShipyaariService {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Authorization': token
           },
           timeout: 30000
         }
