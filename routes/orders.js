@@ -71,8 +71,18 @@ router.post(
       }
 
       const itemsPrice = normItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
-      const shippingPrice = itemsPrice > 500 ? 0 : 50; // Free shipping above ₹500
-      const taxPrice = 0;
+      const shippingPrice = 0; // Free shipping for all orders
+      
+      // Calculate GST from products
+      let taxPrice = 0;
+      for (const item of normItems) {
+        const product = productMap.get(item.product.toString());
+        if (product && product.gstRate) {
+          const itemTax = Math.round((item.price * item.quantity * product.gstRate) / 100);
+          taxPrice += itemTax;
+        }
+      }
+      
       const totalPrice = itemsPrice + shippingPrice + taxPrice;
 
       // Create order in database
@@ -439,7 +449,20 @@ router.post(
       if (!resolvedBilling && resolvedShipping) resolvedBilling = resolvedShipping;
 
       const itemsPrice = normItems.reduce((sum, it) => sum + it.price * it.quantity, 0);
-      const totalPrice = itemsPrice + Number(shippingPrice || 0) + Number(taxPrice || 0);
+      
+      // Calculate GST from products if not provided
+      let calculatedTaxPrice = Number(taxPrice || 0);
+      if (calculatedTaxPrice === 0) {
+        for (const item of normItems) {
+          const product = productMap.get(item.product.toString());
+          if (product && product.gstRate) {
+            const itemTax = Math.round((item.price * item.quantity * product.gstRate) / 100);
+            calculatedTaxPrice += itemTax;
+          }
+        }
+      }
+      
+      const totalPrice = itemsPrice + Number(shippingPrice || 0) + calculatedTaxPrice;
 
       const order = await Order.create({
         user: req.user.sub,
@@ -451,7 +474,7 @@ router.post(
         paymentMethod,
         itemsPrice,
         shippingPrice: Number(shippingPrice || 0),
-        taxPrice: Number(taxPrice || 0),
+        taxPrice: calculatedTaxPrice,
         totalPrice,
         currency: 'INR',
         orderNotes,
