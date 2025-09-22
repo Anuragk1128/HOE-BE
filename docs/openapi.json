@@ -87,8 +87,8 @@
         }
       },
       "delete": {
-        "summary": "Remove product from cart",
-        "description": "Remove the specified product from the authenticated user's cart.",
+        "summary": "Remove product from cart (entirely or by quantity)",
+        "description": "Remove the specified product from the authenticated user's cart. If no quantity is specified, the entire product is removed. If a quantity is provided, only that amount is removed from the cart.",
         "tags": ["Cart"],
         "security": [{ "bearerAuth": [] }],
         "parameters": [
@@ -100,10 +100,45 @@
             "schema": { "type": "string", "format": "objectId", "example": "507f1f77bcf86cd799439011" }
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of items to remove from cart. If not provided or if quantity >= current cart quantity, entire product is removed.",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
-          "204": { "description": "Removed from cart (No Content)" },
+          "200": {
+            "description": "Partially removed from cart (quantity reduced)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Removed 2 item(s) from cart" },
+                    "remainingQuantity": { "type": "integer", "example": 3 },
+                    "item": { "$ref": "#/components/schemas/CartItem" }
+                  }
+                }
+              }
+            }
+          },
+          "204": { "description": "Completely removed from cart (No Content)" },
+          "400": { "description": "Invalid quantity parameter" },
           "404": { "description": "Item not found in cart" },
-          "401": { "description": "Unauthorized" }
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Server error" }
         }
       }
     },
