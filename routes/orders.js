@@ -11,6 +11,106 @@ const shipyaariService = require('../services/shipyariServices');
 
 const router = express.Router();
 
+// Helper function to process shipment creation (same as webhook logic)
+async function processShipmentForOrder(order) {
+  try {
+    console.log(`🚚 Processing shipment for order: ${order.orderId}`);
+
+    // Validate required data before proceeding
+    if (!order.sellerDetails || !order.sellerDetails.address || !order.sellerDetails.contact) {
+      throw new Error('Seller details are missing. Cannot create shipment without seller information.');
+    }
+
+    if (!order.shippingAddress) {
+      throw new Error('Shipping address is missing. Cannot create shipment without delivery address.');
+    }
+
+    // Check environment variables
+    const requiredEnvVars = ['SHIPYAARI_EMAIL', 'SHIPYAARI_PASSWORD'];
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingEnvVars.length > 0) {
+      throw new Error(`Missing Shipyaari environment variables: ${missingEnvVars.join(', ')}`);
+    }
+
+    // Check if shipment already exists
+    if (order.shipmentDetails && order.shipmentDetails.shipyaariOrderId) {
+      console.log(`ℹ️ Shipment already exists for order: ${order.orderId}`);
+      return;
+    }
+
+    // Update order status to processing with status history
+    await Order.findByIdAndUpdate(order._id, {
+      status: 'processing',
+      $push: {
+        statusHistory: {
+          status: 'processing',
+          timestamp: new Date(),
+          updatedBy: 'payment_confirmation',
+          notes: 'Order processing for shipment creation'
+        }
+      }
+    });
+
+    console.log(`📦 Creating Shipyaari shipment for order: ${order.orderId}`);
+
+    // Create Shipyaari shipment
+    const shipmentResult = await shipyaariService.createShipment(order);
+
+    // Update order with shipment details + status history
+    await Order.findByIdAndUpdate(order._id, {
+      'shipmentDetails.shipmentStatus': 'processing',
+      'shipmentDetails.shipyaariOrderId': shipmentResult.shipyaariOrderId,
+      'shipmentDetails.awbNumber': shipmentResult.awbNumber,
+      'shipmentDetails.courierPartner': shipmentResult.courierPartner,
+      'shipmentDetails.trackingUrl': shipmentResult.trackingUrl,
+      'shipmentDetails.estimatedDeliveryDate': shipmentResult.estimatedDeliveryDate,
+      status: 'shipped',
+      shippedAt: new Date(),
+      $push: {
+        statusHistory: {
+          status: 'shipped',
+          timestamp: new Date(),
+          updatedBy: 'payment_confirmation',
+          notes: `Shipment created - AWB: ${shipmentResult.awbNumber}, Courier: ${shipmentResult.courierPartner}`
+        }
+      }
+    });
+
+    console.log('🎉 Automated shipment created successfully:', {
+      orderId: order.orderId,
+      awbNumber: shipmentResult.awbNumber,
+      courierPartner: shipmentResult.courierPartner,
+      trackingUrl: shipmentResult.trackingUrl
+    });
+
+  } catch (error) {
+    console.error('❌ Process shipment error:', error);
+    
+    // Update order with error status
+    await Order.findByIdAndUpdate(order._id, {
+      $push: {
+        statusHistory: {
+          status: 'shipment_failed',
+          timestamp: new Date(),
+          updatedBy: 'payment_confirmation',
+          notes: `Shipment creation failed: ${error.message}`
+        }
+      }
+    });
+    
+    // Update order with shipment error + status history
+    await Order.findByIdAndUpdate(order._id, {
+      'shipmentDetails.shipmentStatus': 'failed',
+      'shipmentDetails.shipmentError': error.message,
+    });
+
+    // Optionally: Send notification to admin about shipment failure
+    console.error(`🚨 ALERT: Shipment failed for order ${order.orderId}:`, error.message);
+    throw error; // Re-throw to be handled by caller
+  }
+}
+
 // Helpers
 const isOwnerOrAdmin = (req, order) => {
   return order.user.toString() === req.user.sub || req.user.role === 'admin';
@@ -180,11 +280,29 @@ router.post('/payment/confirm', [authRequired], async (req, res) => {
         'razorpayDetails.paymentStatus': 'captured',
         status: 'paid',
         paidAt: new Date(),
+        $push: {
+          statusHistory: {
+            status: 'paid',
+            timestamp: new Date(),
+            updatedBy: 'payment_confirmation',
+            notes: `Payment confirmed: ₹${req.body.amount ? req.body.amount / 100 : 'Unknown'} via Razorpay`
+          }
+        }
       },
       { new: true }
     );
 
     if (!order) return res.status(404).json({ success: false, message: 'Order not found or access denied' });
+
+    // Trigger Shipyaari shipment creation after payment confirmation
+    console.log(`🚚 Triggering Shipyaari shipment creation for order: ${order.orderId}`);
+    try {
+      // Process shipment creation (includes duplicate prevention)
+      await processShipmentForOrder(order);
+    } catch (shipmentError) {
+      console.error('❌ Shipment creation failed during payment confirmation:', shipmentError);
+      // Don't fail the payment confirmation if shipment creation fails
+    }
 
     return res.json({
       success: true,
@@ -197,6 +315,82 @@ router.post('/payment/confirm', [authRequired], async (req, res) => {
   } catch (error) {
     console.error('Payment confirmation error:', error);
     return res.status(500).json({ success: false, message: 'Payment confirmation failed', error: error.message });
+  }
+});
+
+// POST /api/orders/fix-missing-shipments - Fix paid orders without Shipyaari shipments
+router.post('/fix-missing-shipments', [authRequired, requireRoles(['admin'])], async (req, res) => {
+  try {
+    console.log('🔧 Checking for paid orders without Shipyaari shipments...');
+    
+    // Find paid orders without Shipyaari shipments
+    const ordersWithoutShipments = await Order.find({
+      status: 'paid',
+      $or: [
+        { 'shipmentDetails.shipyaariOrderId': { $exists: false } },
+        { 'shipmentDetails.shipyaariOrderId': null },
+        { 'shipmentDetails.shipmentStatus': { $exists: false } }
+      ]
+    }).limit(10); // Process max 10 orders at a time
+
+    if (ordersWithoutShipments.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No paid orders found without Shipyaari shipments',
+        processedCount: 0
+      });
+    }
+
+    console.log(`📋 Found ${ordersWithoutShipments.length} orders without shipments`);
+
+    const results = [];
+    for (const order of ordersWithoutShipments) {
+      try {
+        console.log(`🔧 Processing order: ${order.orderId}`);
+        
+        // Check if seller details are present
+        if (!order.sellerDetails || !order.sellerDetails.address || !order.sellerDetails.contact) {
+          results.push({
+            orderId: order.orderId,
+            status: 'skipped',
+            reason: 'Missing seller details'
+          });
+          continue;
+        }
+
+        // Process shipment creation
+        await processShipmentForOrder(order);
+        
+        results.push({
+          orderId: order.orderId,
+          status: 'success',
+          message: 'Shipment created successfully'
+        });
+        
+      } catch (error) {
+        console.error(`❌ Failed to process order ${order.orderId}:`, error.message);
+        results.push({
+          orderId: order.orderId,
+          status: 'failed',
+          error: error.message
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Processed ${ordersWithoutShipments.length} orders`,
+      processedCount: ordersWithoutShipments.length,
+      results: results
+    });
+
+  } catch (error) {
+    console.error('❌ Fix missing shipments error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process missing shipments',
+      error: error.message
+    });
   }
 });
 

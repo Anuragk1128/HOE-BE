@@ -206,6 +206,29 @@ async function processShipment(order) {
   try {
     console.log(`🚚 Processing shipment for order: ${order.orderId}`);
 
+    // Validate required data before proceeding
+    if (!order.sellerDetails || !order.sellerDetails.address || !order.sellerDetails.contact) {
+      throw new Error('Seller details are missing. Cannot create shipment without seller information.');
+    }
+
+    if (!order.shippingAddress) {
+      throw new Error('Shipping address is missing. Cannot create shipment without delivery address.');
+    }
+
+    // Check environment variables
+    const requiredEnvVars = ['SHIPYAARI_EMAIL', 'SHIPYAARI_PASSWORD'];
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    
+    if (missingEnvVars.length > 0) {
+      throw new Error(`Missing Shipyaari environment variables: ${missingEnvVars.join(', ')}`);
+    }
+
+    // Check if shipment already exists
+    if (order.shipmentDetails && order.shipmentDetails.shipyaariOrderId) {
+      console.log(`ℹ️ Shipment already exists for order: ${order.orderId}`);
+      return;
+    }
+
     // Update order status to processing with status history
     await Order.findByIdAndUpdate(order._id, {
       status: 'processing',
@@ -254,18 +277,22 @@ async function processShipment(order) {
   } catch (error) {
     console.error('❌ Process shipment error:', error);
     
-    // Update order with shipment error + status history
+    // Update order with error status
     await Order.findByIdAndUpdate(order._id, {
-      'shipmentDetails.shipmentStatus': 'failed',
-      'shipmentDetails.shipmentError': error.message,
       $push: {
         statusHistory: {
           status: 'shipment_failed',
           timestamp: new Date(),
-          updatedBy: 'system',
+          updatedBy: 'shipyaari_integration',
           notes: `Shipment creation failed: ${error.message}`
         }
       }
+    });
+    
+    // Update order with shipment error + status history
+    await Order.findByIdAndUpdate(order._id, {
+      'shipmentDetails.shipmentStatus': 'failed',
+      'shipmentDetails.shipmentError': error.message,
     });
 
     // Optionally: Send notification to admin about shipment failure
