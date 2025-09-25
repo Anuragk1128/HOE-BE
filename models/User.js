@@ -94,7 +94,7 @@ UserSchema.pre('save', async function(next) {
     }
     next();
   } catch (error) {
-    console.error('Error in user geocoding middleware:', error);
+    console.error('Error in user geocoding middleware: ', error);
     next(); // Continue saving even if geocoding fails
   }
 });
