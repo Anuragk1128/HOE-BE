@@ -89,6 +89,7 @@ const ProductSchema = new Schema(
           'wood',
           'cotton',
           'polyester',
+          "zaquard",
           'silk',
           'mixed-material'
         ]
