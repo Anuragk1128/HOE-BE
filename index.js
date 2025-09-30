@@ -26,7 +26,10 @@ const geocodingRoutes = require('./routes/geocoding');
 
 const app = express();
 
-// Parse JSON
+// Razorpay webhook must use raw body for signature verification
+app.use('/api/webhook', express.raw({ type: 'application/json' }));
+
+// Parse JSON for all other routes
 app.use(express.json());
 
 // CORS setup

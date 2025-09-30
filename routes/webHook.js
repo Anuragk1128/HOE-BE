@@ -8,9 +8,9 @@ const shipyaariService = require('../services/shipyariServices');
 // Razorpay webhook handler
 router.post('/razorpay', async (req, res) => {
   try {
-    // Verify webhook signature
+    // Verify webhook signature against RAW body (Buffer)
     const signature = req.headers['x-razorpay-signature'];
-    const body = JSON.stringify(req.body);
+    const rawBody = req.body; // Buffer, because express.raw is applied on this route
     
     if (!signature) {
       console.error('❌ Missing webhook signature');
@@ -19,7 +19,7 @@ router.post('/razorpay', async (req, res) => {
 
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
-      .update(body)
+      .update(rawBody)
       .digest('hex');
 
     if (signature !== expectedSignature) {
@@ -27,7 +27,9 @@ router.post('/razorpay', async (req, res) => {
       return res.status(400).json({ error: 'Invalid signature' });
     }
 
-    const { event, payload } = req.body;
+    // Parse JSON only AFTER verifying signature
+    const parsed = JSON.parse(rawBody.toString('utf8'));
+    const { event, payload } = parsed;
     console.log(`🔔 Webhook received: ${event} - ${payload.payment?.entity?.id || 'Unknown'}`);
 
     // Handle different payment events

@@ -259,9 +259,13 @@ class ShipyaariService {
         fullAddress: this.buildFullAddress(order.shippingAddress),
         pincode: parseInt(order.shippingAddress.postalCode),
         startTime: "10",
-        endTime: "20",
-        latitude: order.shippingAddress.latitude ? parseFloat(order.shippingAddress.latitude) : null,
-        longitude: order.shippingAddress.longitude ? parseFloat(order.shippingAddress.longitude) : null,
+        endTime: "11",
+        latitude: order.shippingAddress?.latitude !== undefined && order.shippingAddress?.latitude !== null
+          ? String(order.shippingAddress.latitude)
+          : "",
+        longitude: order.shippingAddress?.longitude !== undefined && order.shippingAddress?.longitude !== null
+          ? String(order.shippingAddress.longitude)
+          : "",
         contact: {
           name: order.shippingAddress.fullName,
           mobileNo: parseInt(order.shippingAddress.phone),
@@ -274,17 +278,17 @@ class ShipyaariService {
         type: "parcel",
         weightUnit: "Kg",
         deadWeight: item.weight || 1,
-        length: item.dimensions?.length || 10,
-        breadth: item.dimensions?.breadth || 10,
-        height: item.dimensions?.height || 10,
+        length: item.dimensions?.length ,
+        breadth: item.dimensions?.breadth ,
+        height: item.dimensions?.height,
         qty: item.quantity,
         discount: 0,
         measureUnit: "cm",
         products: [{
           name: item.title,
-          category: item.category || "General",
-          sku: item.sku || item.product.toString(),
-          hsnCode: item.hsnCode || "1234",
+          category: item.category ,
+          sku: item.sku,
+          hsnCode: item.hsnCode,
           qty: item.quantity,
           unitPrice: item.price,
           discount: 0,
@@ -294,9 +298,9 @@ class ShipyaariService {
           totalPrice: item.price * item.quantity,
           weightUnit: "kg",
           deadWeight: item.weight || 1,
-          length: item.dimensions?.length || 10,
-          breadth: item.dimensions?.breadth || 10,  
-          height: item.dimensions?.height || 10,
+          length: item.dimensions?.length ,
+          breadth: item.dimensions?.breadth,  
+          height: item.dimensions?.height ,
           measureUnit: "cm",
           images: item.image ? [item.image] : []
         }],
@@ -331,8 +335,8 @@ class ShipyaariService {
       childId: 2,
       orderId: order.orderId,
       eWayBillNo: "",
-      brandName: process.env.BRAND_NAME || "Your Store",
-      brandLogo: process.env.BRAND_LOGO || ""
+      brandName: process.env.BRAND_NAME || "HOE",
+      brandLogo: process.env.BRAND_LOGO 
     };
   }
 
