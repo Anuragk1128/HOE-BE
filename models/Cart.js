@@ -13,7 +13,7 @@ const cartItemSchema = new mongoose.Schema(
 cartItemSchema.index({ user: 1, product: 1 }, { unique: true });
 
 cartItemSchema.pre(/^find/, function(next) {
-  this.populate({ path: 'product', select: 'title price images slug brandId categoryId subcategoryId' });
+  this.populate({ path: 'product', select: 'title price images slug brandId categoryId subcategoryId gstRate hsnCode' });
   next();
 });
 
