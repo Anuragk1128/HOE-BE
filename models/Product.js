@@ -76,6 +76,8 @@ const ProductSchema = new Schema(
     attributes: {
       size: [{ type: String }],
       color: [{ type: String }],
+      features: [{ type: String }],
+      care: [{ type: String }],
       material: { 
         type: String,
         enum: [
