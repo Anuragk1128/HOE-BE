@@ -602,18 +602,46 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["name", "email", "password"],
+                "required": ["name", "email", "password", "otp"],
                 "properties": {
                   "name": { "type": "string" },
                   "email": { "type": "string", "format": "email" },
-                  "password": { "type": "string", "format": "password" }
+                  "password": { "type": "string", "format": "password" },
+                  "otp": { "type": "string", "description": "6-digit OTP sent to email", "example": "123456" }
+                }
+              }
+            }
+          }
+        },
+        "description": "Register a customer with email OTP verification. First call POST /api/auth/register/send-otp to receive OTP via email, then use this endpoint to complete registration.",
+        "responses": {
+          "201": { "description": "Registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "400": { "description": "Missing fields, invalid OTP, or OTP expired" },
+          "409": { "description": "Email already in use" }
+        }
+      }
+    },
+    "/api/auth/register/send-otp": {
+      "post": {
+        "summary": "Send OTP for registration",
+        "description": "Send a 6-digit OTP to the provided email address for customer registration. The OTP expires in 10 minutes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "description": "Email address to send OTP to" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "200": { "description": "OTP sent to email", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "400": { "description": "Missing email" },
           "409": { "description": "Email already in use" }
         }
       }

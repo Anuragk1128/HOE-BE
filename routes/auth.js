@@ -5,6 +5,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const Admin = require('../models/Admin');
+const { sendOtpEmail } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -16,17 +17,65 @@ const signToken = (user) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 };
 
+// Simple in-memory OTP store: email -> { otpHash, expiresAt }
+// Note: For production, replace with persistent or cache store (e.g., Redis/DB)
+const otpStore = new Map();
+
 // POST /api/auth/register (customer)
+// Step 1: Send OTP to email
+router.post('/register/send-otp', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+
+    const lowerEmail = email.toLowerCase();
+
+    // Prevent sending OTP if user already exists
+    const exists = await User.findOne({ email: lowerEmail });
+    if (exists) return res.status(409).json({ message: 'Email already in use' });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    otpStore.set(lowerEmail, { otpHash, expiresAt });
+
+    await sendOtpEmail(lowerEmail, otp);
+    res.json({ message: 'OTP sent to email' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Step 2: Verify OTP and create user
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ message: 'Missing fields' });
+    const { name, email, password, otp } = req.body;
+    if (!name || !email || !password || !otp) return res.status(400).json({ message: 'Missing fields' });
 
-    const exists = await User.findOne({ email: email.toLowerCase() });
+    const lowerEmail = email.toLowerCase();
+
+    // Check OTP presence
+    const record = otpStore.get(lowerEmail);
+    if (!record) return res.status(400).json({ message: 'OTP not requested or expired' });
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(lowerEmail);
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    const ok = await bcrypt.compare(otp, record.otpHash);
+    if (!ok) return res.status(400).json({ message: 'Invalid OTP' });
+
+    // Ensure email still not taken
+    const exists = await User.findOne({ email: lowerEmail });
     if (exists) return res.status(409).json({ message: 'Email already in use' });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email: email.toLowerCase(), passwordHash, role: 'customer' });
+    const user = await User.create({ name, email: lowerEmail, passwordHash, role: 'customer' });
+
+    // Clear OTP after successful registration
+    otpStore.delete(lowerEmail);
+
     const token = signToken(user);
     res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) { next(err); }
