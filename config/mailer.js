@@ -9,6 +9,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  // Additional Gmail-specific options
+  tls: {
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false
+  }
 });
 
 module.exports = transporter;
