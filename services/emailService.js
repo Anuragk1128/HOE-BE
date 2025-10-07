@@ -4,8 +4,8 @@ async function sendOtpEmail(to, otp) {
   const mailOptions = {
     from: process.env.SMTP_USER, // sender address
     to,
-    subject: 'Your OTP Code',
-    html: `<p>Your OTP is: <b>${otp}</b></p><p>Expires in 10 minutes.</p>`,
+    subject: 'Registration Code',
+    html: `<p>Your OTP for registration is: <b>${otp}</b></p><p>Expires in 10 minutes.</p>`,
   };
 
   try {
