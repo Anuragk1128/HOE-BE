@@ -801,6 +801,60 @@
         }
       }
     },
+    "/api/auth/forgot-password/send-otp": {
+      "post": {
+        "summary": "Send OTP for password reset",
+        "description": "Send a 6-digit OTP to the provided email address for password reset. The OTP expires in 10 minutes. Only sends OTP to existing active users.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "description": "Email address of the account to reset password for" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OTP sent to email", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "400": { "description": "Missing email" },
+          "404": { "description": "No active account found with this email address" }
+        }
+      }
+    },
+    "/api/auth/forgot-password/reset": {
+      "post": {
+        "summary": "Reset password with OTP",
+        "description": "Verify the OTP and reset the password for the account. The OTP must be valid and not expired.",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "otp", "newPassword"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "description": "Email address of the account" },
+                  "otp": { "type": "string", "description": "6-digit OTP sent to email", "example": "123456" },
+                  "newPassword": { "type": "string", "format": "password", "description": "New password for the account" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password reset successful", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "400": { "description": "Missing fields, invalid OTP, or OTP expired" },
+          "404": { "description": "User not found" }
+        }
+      }
+    },
     "/api/brands": {
       "get": {
         "summary": "List active brands",
@@ -1641,6 +1695,34 @@
           "200": { "description": "Vendor updated successfully" }, 
           "400": { "description": "Invalid status value or no fields to update" },
           "404": { "description": "Vendor not found" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/api/admin/users/all": {
+      "get": {
+        "summary": "Get all users (admin)",
+        "description": "Retrieve a list of all users in the system. Admin only endpoint.",
+        "tags": ["Admin", "Users"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/User" }
+                    }
+                  }
+                }
+              }
+            }
+          },
           "401": { "description": "Unauthorized" },
           "403": { "description": "Forbidden" }
         }
