@@ -5,7 +5,7 @@ const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const Vendor = require('../models/Vendor');
 const Admin = require('../models/Admin');
-const { sendOtpEmail } = require('../services/emailService');
+const { sendOtpEmail, sendPasswordResetOtpEmail } = require('../services/emailService');
 
 const router = express.Router();
 
@@ -20,6 +20,9 @@ const signToken = (user) => {
 // Simple in-memory OTP store: email -> { otpHash, expiresAt }
 // Note: For production, replace with persistent or cache store (e.g., Redis/DB)
 const otpStore = new Map();
+
+// Password reset OTP store: email -> { otpHash, expiresAt }
+const passwordResetOtpStore = new Map();
 
 // POST /api/auth/register (customer)
 // Step 1: Send OTP to email
@@ -180,6 +183,75 @@ router.post('/admin/create', async (req, res, next) => {
     const token = signToken(user);
     res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) { next(err); }
+});
+
+// POST /api/auth/forgot-password/send-otp
+// Send OTP for password reset
+router.post('/forgot-password/send-otp', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required' });
+
+    const lowerEmail = email.toLowerCase();
+
+    // Check if user exists (for any role)
+    const user = await User.findOne({ email: lowerEmail, isActive: true });
+    if (!user) return res.status(404).json({ message: 'No account found with this email address' });
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    // Store OTP for password reset
+    passwordResetOtpStore.set(lowerEmail, { otpHash, expiresAt });
+
+    // Send password reset OTP email
+    await sendPasswordResetOtpEmail(lowerEmail, otp);
+    res.json({ message: 'Password reset OTP sent to email' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/forgot-password/reset
+// Verify OTP and reset password
+router.post('/forgot-password/reset', async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ message: 'Missing fields' });
+
+    const lowerEmail = email.toLowerCase();
+
+    // Check OTP presence
+    const record = passwordResetOtpStore.get(lowerEmail);
+    if (!record) return res.status(400).json({ message: 'OTP not requested or expired' });
+    if (Date.now() > record.expiresAt) {
+      passwordResetOtpStore.delete(lowerEmail);
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    // Verify OTP
+    const ok = await bcrypt.compare(otp, record.otpHash);
+    if (!ok) return res.status(400).json({ message: 'Invalid OTP' });
+
+    // Check if user exists
+    const user = await User.findOne({ email: lowerEmail, isActive: true });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await User.findByIdAndUpdate(user._id, { passwordHash });
+
+    // Clear OTP after successful reset
+    passwordResetOtpStore.delete(lowerEmail);
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // POST /api/auth/google-login (customer only)
