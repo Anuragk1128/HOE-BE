@@ -573,6 +573,16 @@ router.get('/products', async (req, res, next) => {
     });
   } catch (err) { next(err); }
 });
+router.get("/users/all",async(req,res,next)=>{
+  try{
+    const users=await User.find()
+    res.json({
+      data:users
+    });
+  }catch(err){
+    next(err);
+  }
+})
 
 // ===== Vendor Management Endpoints =====
 // GET /api/admin/vendors - get list of all vendors (admin) - simple version
